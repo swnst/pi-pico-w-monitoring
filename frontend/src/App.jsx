@@ -4,7 +4,9 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 
-const socket = io('http://localhost:3000');
+const socket = io('https://pi-pico-w-monitoring.onrender.com/', {
+  transports: ['websocket']
+});
 
 const formatUptime = (ms) => {
   if (!ms) return "0d 0h 0m 0s";

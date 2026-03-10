@@ -1,50 +1,58 @@
 const express = require('express');
 const http = require('http');
-const cors = require('cors');
 const { Server } = require('socket.io');
+const cors = require('cors');
+const mongoose = require('mongoose');
+require('dotenv').config();
 
 const app = express();
-const server = http.createServer(app);
-
 app.use(cors());
 app.use(express.json());
 
+const server = http.createServer(app);
 const io = new Server(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
+    cors: { origin: "*" }
 });
 
-app.post('/api/telemetry', (req, res) => {
-    try {
-        const telemetryData = req.body;
+const MONGODB_URI = process.env.MONGODB_URI;
+if (MONGODB_URI) {
+    mongoose.connect(MONGODB_URI)
+        .then(() => console.log('[DB] Connected to MongoDB Atlas'))
+        .catch(err => console.error('[DB] Connection error:', err));
+} else {
+    console.log('[DB] Warning: MONGODB_URI not provided. Running in Memory-only mode.');
+}
 
-        if (!telemetryData || !Array.isArray(telemetryData)) {
-            return res.status(400).json({ error: "Invalid payload format. Expected JSON array." });
+const telemetrySchema = new mongoose.Schema({
+    time: String,
+    uptime: Number,
+    voltage: Number,
+    ext_temp: Number,
+    core_temp: Number,
+    rssi: Number,
+    free_ram: Number,
+    server_timestamp: { type: Date, default: Date.now }
+});
+const Telemetry = mongoose.model('Telemetry', telemetrySchema);
+
+app.post('/api/telemetry', async (req, res) => {
+    try {
+        const dataBatch = req.body;
+
+        io.emit('telemetry_stream', dataBatch);
+
+        if (MONGODB_URI && Array.isArray(dataBatch) && dataBatch.length > 0) {
+            await Telemetry.insertMany(dataBatch);
         }
 
-        console.log(`[*] Received ${telemetryData.length} data points from Pico W`);
-
-        io.emit('telemetry_stream', telemetryData);
-
-        res.status(200).json({ message: "Data ingested successfully" });
-
+        res.status(200).send({ status: 'success', message: 'Telemetry processed and stored' });
     } catch (error) {
-        console.error("[!] Error processing telemetry:", error);
-        res.status(500).json({ error: "Internal Server Error" });
+        console.error('[API] Processing Error:', error);
+        res.status(500).send({ status: 'error', message: 'Internal Server Error' });
     }
-});
-
-io.on('connection', (socket) => {
-    console.log(`[+] Web Client connected: ${socket.id}`);
-    socket.on('disconnect', () => {
-        console.log(`[-] Web Client disconnected: ${socket.id}`);
-    });
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`[*] Backend Architecture running on port ${PORT}`);
-    console.log(`[*] Ready to receive telemetry at POST http://localhost:${PORT}/api/telemetry`);
+    console.log(`[SYS] Server running on port ${PORT}`);
 });
