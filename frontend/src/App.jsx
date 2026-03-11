@@ -4,7 +4,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 
-const socket = io('https://pi-pico-w-monitoring.onrender.com/', {
+const socket = io('https://pi-pico-w-monitoring.onrender.com', {
   transports: ['websocket']
 });
 
@@ -148,75 +148,69 @@ function App() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: colors.bgFull, color: colors.textMain, fontFamily: 'system-ui, sans-serif', padding: '40px 20px', display: 'flex', justifyContent: 'center' }}>
-      <div style={{ width: '100%', maxWidth: '1400px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div className="app-root">
+      <div className="layout-wrapper">
 
-        <div style={{ backgroundColor: colors.bgCard, borderRadius: '16px', padding: '30px', border: '1px solid #334155', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${colors.gridLine}`, paddingBottom: '20px', marginBottom: '25px' }}>
-            <div>
-              <h1 style={{ margin: '0 0 10px 0', fontSize: '26px', fontWeight: '800', letterSpacing: '-0.5px' }}>Pico W Edge Node Diagnostics</h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', fontSize: '13px', color: colors.textMuted }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <div style={{
-                    width: '10px', height: '10px', borderRadius: '50%',
+        <div className="main-card">
+          <div className="header-section">
+            <div className="header-content">
+              <h1 className="header-title">Pico W Edge Node Diagnostics</h1>
+              <div className="header-details">
+                <div className="detail-item">
+                  <div className="status-dot" style={{
                     backgroundColor: statusColor,
                     boxShadow: `0 0 12px ${statusColor}`,
                     animation: isNodeActive ? 'pulse 2s infinite' : 'none'
                   }}></div>
                   <strong style={{ color: statusColor }}>{statusText}</strong>
                 </div>
-                <span style={{ borderLeft: `1px solid ${colors.gridLine}`, paddingLeft: '15px' }}>MAC: <strong>XX:XX:XX:XX:XX:XX</strong></span>
-                <span style={{ borderLeft: `1px solid ${colors.gridLine}`, paddingLeft: '15px' }}>FW: <strong>v1.0.0-prod</strong></span>
-                <span style={{ borderLeft: `1px solid ${colors.gridLine}`, paddingLeft: '15px' }}>Points: <strong>{dataPoints.length}</strong>/100</span>
+                <span className="detail-separator">MAC: <strong style={{ color: colors.textMain }}>XX:XX:XX:XX:XX:XX</strong></span>
+                <span className="detail-separator">FW: <strong style={{ color: colors.textMain }}>v1.0.0-prod</strong></span>
+                <span className="detail-separator">Points: <strong style={{ color: colors.textMain }}>{dataPoints.length}</strong>/100</span>
               </div>
             </div>
-            <button
-              onClick={exportToCSV}
-              style={{ backgroundColor: '#2563EB', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', transition: 'background 0.2s' }}
-              onMouseOver={(e) => e.target.style.backgroundColor = '#1D4ED8'}
-              onMouseOut={(e) => e.target.style.backgroundColor = '#2563EB'}
-            >
+            <button className="export-btn" onClick={exportToCSV}>
               Download CSV
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px', marginBottom: '30px' }}>
-            <div style={{ backgroundColor: colors.bgKPI, padding: '15px', borderRadius: '8px', borderLeft: `4px solid ${colors.voltage}`, border: `1px solid ${colors.gridLine}` }}>
-              <div style={{ fontSize: '11px', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Voltage (ADC)</div>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: colors.voltage }}>{latestData.voltage.toFixed(2)} <span style={{ fontSize: '14px', color: colors.textMuted }}>V</span></div>
+          <div className="kpi-grid">
+            <div className="kpi-card" style={{ borderLeft: `4px solid ${colors.voltage}` }}>
+              <div className="kpi-label">Voltage (ADC)</div>
+              <div className="kpi-value" style={{ color: colors.voltage }}>{latestData.voltage.toFixed(2)} <span className="kpi-unit">V</span></div>
             </div>
-            <div style={{ backgroundColor: colors.bgKPI, padding: '15px', borderRadius: '8px', borderLeft: `4px solid ${colors.extTemp}`, border: `1px solid ${colors.gridLine}` }}>
-              <div style={{ fontSize: '11px', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Ext. Temperature</div>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: colors.extTemp }}>{latestData.ext_temp.toFixed(2)} <span style={{ fontSize: '14px', color: colors.textMuted }}>°C</span></div>
+            <div className="kpi-card" style={{ borderLeft: `4px solid ${colors.extTemp}` }}>
+              <div className="kpi-label">Ext. Temperature</div>
+              <div className="kpi-value" style={{ color: colors.extTemp }}>{latestData.ext_temp.toFixed(2)} <span className="kpi-unit">°C</span></div>
             </div>
-            <div style={{ backgroundColor: colors.bgKPI, padding: '15px', borderRadius: '8px', borderLeft: `4px solid ${latestData.core_temp > 45 ? colors.warning : colors.coreTemp}`, border: `1px solid ${latestData.core_temp > 45 ? colors.warning : colors.gridLine}` }}>
-              <div style={{ fontSize: '11px', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Core Temperature</div>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: latestData.core_temp > 45 ? colors.warning : colors.coreTemp }}>{latestData.core_temp.toFixed(2)} <span style={{ fontSize: '14px', color: colors.textMuted }}>°C</span></div>
+            <div className="kpi-card" style={{ borderLeft: `4px solid ${latestData.core_temp > 45 ? colors.warning : colors.coreTemp}`, borderColor: latestData.core_temp > 45 ? colors.warning : colors.gridLine }}>
+              <div className="kpi-label">Core Temperature</div>
+              <div className="kpi-value" style={{ color: latestData.core_temp > 45 ? colors.warning : colors.coreTemp }}>{latestData.core_temp.toFixed(2)} <span className="kpi-unit">°C</span></div>
             </div>
-            <div style={{ backgroundColor: colors.bgKPI, padding: '15px', borderRadius: '8px', borderLeft: `4px solid ${latestData.rssi < -80 ? colors.warning : colors.rssi}`, border: `1px solid ${latestData.rssi < -80 ? colors.warning : colors.gridLine}` }}>
-              <div style={{ fontSize: '11px', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Signal / RAM</div>
-              <div style={{ fontSize: '18px', fontWeight: 'bold', color: colors.textMain }}>
-                {latestData.rssi} <span style={{ fontSize: '12px', color: colors.textMuted }}>dBm</span>
-                <div style={{ fontSize: '14px', color: colors.textMuted, marginTop: '2px' }}>{(latestData.free_ram / 1024).toFixed(1)} KB</div>
+            <div className="kpi-card" style={{ borderLeft: `4px solid ${latestData.rssi < -80 ? colors.warning : colors.rssi}`, borderColor: latestData.rssi < -80 ? colors.warning : colors.gridLine }}>
+              <div className="kpi-label">Signal / RAM</div>
+              <div className="kpi-value-small" style={{ color: colors.textMain }}>
+                {latestData.rssi} <span className="kpi-unit-small">dBm</span>
+                <div className="kpi-sub-value">{(latestData.free_ram / 1024).toFixed(1)} KB</div>
               </div>
             </div>
-            <div style={{ backgroundColor: colors.bgKPI, padding: '15px', borderRadius: '8px', borderLeft: `4px solid ${colors.info}`, border: `1px solid ${colors.gridLine}` }}>
-              <div style={{ fontSize: '11px', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Hardware Uptime</div>
-              <div style={{ fontSize: '18px', fontWeight: 'bold', color: colors.textMain }}>{formatUptime(latestData.uptime)}</div>
+            <div className="kpi-card" style={{ borderLeft: `4px solid ${colors.info}` }}>
+              <div className="kpi-label">Hardware Uptime</div>
+              <div className="kpi-value-small" style={{ color: colors.textMain, paddingTop: '4px' }}>{formatUptime(latestData.uptime)}</div>
             </div>
-            <div style={{ backgroundColor: colors.bgKPI, padding: '15px', borderRadius: '8px', borderLeft: `4px solid ${colors.info}`, border: `1px solid ${colors.gridLine}` }}>
-              <div style={{ fontSize: '11px', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Data Throughput</div>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: colors.info }}>{samplingRate.toFixed(1)} <span style={{ fontSize: '14px', color: colors.textMuted }}>Hz</span></div>
+            <div className="kpi-card" style={{ borderLeft: `4px solid ${colors.info}` }}>
+              <div className="kpi-label">Data Throughput</div>
+              <div className="kpi-value" style={{ color: colors.info }}>{samplingRate.toFixed(1)} <span className="kpi-unit">Hz</span></div>
             </div>
           </div>
 
-          <div style={{ width: '100%', height: 400, position: 'relative' }}>
+          <div className="chart-container">
             {dataPoints.length === 0 && (
-              <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', color: colors.textMuted, zIndex: 10, fontSize: '16px', fontWeight: '500', pointerEvents: 'none' }}>
+              <div className="empty-state">
                 Waiting for Edge Node Telemetry...
               </div>
             )}
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={dataPoints} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorVoltage" x1="0" y1="0" x2="0" y2="1">
@@ -246,33 +240,33 @@ function App() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-          <div style={{ backgroundColor: colors.bgCard, borderRadius: '16px', padding: '25px', border: '1px solid #334155' }}>
-            <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: '1px' }}>Statistical Summary (Window: 100 Pts)</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        <div className="bottom-panel">
+          <div className="stats-card">
+            <h3 className="section-title">Statistical Summary (Window: 100 Pts)</h3>
+            <div className="stats-inner-grid">
               <div>
                 <div style={{ color: colors.coreTemp, fontWeight: 'bold', marginBottom: '10px' }}>Core Temperature</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '5px' }}><span>MAX:</span> <strong>{stats.maxTemp.toFixed(2)} °C</strong></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '5px' }}><span>MIN:</span> <strong>{stats.minTemp.toFixed(2)} °C</strong></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '5px' }}><span>AVG:</span> <strong>{stats.avgTemp.toFixed(2)} °C</strong></div>
+                <div className="stat-row"><span>MAX:</span> <strong>{stats.maxTemp.toFixed(2)} °C</strong></div>
+                <div className="stat-row"><span>MIN:</span> <strong>{stats.minTemp.toFixed(2)} °C</strong></div>
+                <div className="stat-row"><span>AVG:</span> <strong>{stats.avgTemp.toFixed(2)} °C</strong></div>
               </div>
               <div>
                 <div style={{ color: colors.voltage, fontWeight: 'bold', marginBottom: '10px' }}>ADC Voltage</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '5px' }}><span>MAX:</span> <strong>{stats.maxVolt.toFixed(2)} V</strong></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '5px' }}><span>MIN:</span> <strong>{stats.minVolt.toFixed(2)} V</strong></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '5px' }}><span>AVG:</span> <strong>{stats.avgVolt.toFixed(2)} V</strong></div>
+                <div className="stat-row"><span>MAX:</span> <strong>{stats.maxVolt.toFixed(2)} V</strong></div>
+                <div className="stat-row"><span>MIN:</span> <strong>{stats.minVolt.toFixed(2)} V</strong></div>
+                <div className="stat-row"><span>AVG:</span> <strong>{stats.avgVolt.toFixed(2)} V</strong></div>
               </div>
             </div>
           </div>
 
-          <div style={{ backgroundColor: colors.bgCard, borderRadius: '16px', padding: '25px', border: '1px solid #334155', maxHeight: '250px', overflowY: 'auto' }}>
-            <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: '1px' }}>System Event Logs</h3>
+          <div className="logs-card">
+            <h3 className="section-title">System Event Logs</h3>
             {eventLogs.length === 0 ? (
               <div style={{ color: colors.textMuted, fontSize: '14px', fontStyle: 'italic' }}>No anomalies detected in the current session.</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {eventLogs.map(log => (
-                  <div key={log.id} style={{ display: 'flex', gap: '15px', fontSize: '13px', padding: '10px', backgroundColor: colors.bgKPI, borderRadius: '6px', borderLeft: `3px solid ${log.type === 'CRITICAL' ? colors.danger : colors.warning}` }}>
+                  <div key={log.id} className="log-item" style={{ borderLeft: `3px solid ${log.type === 'CRITICAL' ? colors.danger : colors.warning}` }}>
                     <span style={{ color: colors.textMuted, whiteSpace: 'nowrap' }}>[{log.time}]</span>
                     <strong style={{ color: log.type === 'CRITICAL' ? colors.danger : colors.warning }}>{log.type}</strong>
                     <span style={{ color: colors.textMain }}>{log.msg}</span>
@@ -285,15 +279,239 @@ function App() {
 
       </div>
       <style>{`
+        :root {
+          --bg-full: #0B1120;
+          --bg-card: #1E293B;
+          --bg-kpi: #0F172A;
+          --grid-line: #334155;
+          --text-muted: #94A3B8;
+        }
+        .app-root {
+          min-height: 100vh;
+          background-color: var(--bg-full);
+          color: #F8FAFC;
+          font-family: system-ui, sans-serif;
+          padding: 40px 20px;
+          display: flex;
+          justify-content: center;
+        }
+        .layout-wrapper {
+          width: 100%;
+          max-width: 1400px;
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+        .main-card {
+          background-color: var(--bg-card);
+          border-radius: 16px;
+          padding: 30px;
+          border: 1px solid var(--grid-line);
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        }
+        .header-section {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          border-bottom: 1px solid var(--grid-line);
+          padding-bottom: 20px;
+          margin-bottom: 25px;
+          gap: 15px;
+        }
+        .header-title {
+          margin: 0 0 10px 0;
+          font-size: 26px;
+          font-weight: 800;
+          letter-spacing: -0.5px;
+        }
+        .header-details {
+          display: flex;
+          align-items: center;
+          gap: 15px;
+          font-size: 13px;
+          color: var(--text-muted);
+          flex-wrap: wrap;
+        }
+        .detail-item {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .status-dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+        }
+        .detail-separator {
+          border-left: 1px solid var(--grid-line);
+          padding-left: 15px;
+        }
+        .export-btn {
+          background-color: #2563EB;
+          color: white;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-weight: bold;
+          font-size: 14px;
+          transition: background 0.2s;
+          white-space: nowrap;
+        }
+        .export-btn:hover {
+          background-color: #1D4ED8;
+        }
+        .kpi-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 15px;
+          margin-bottom: 30px;
+        }
+        .kpi-card {
+          background-color: var(--bg-kpi);
+          padding: 15px;
+          border-radius: 8px;
+          border: 1px solid var(--grid-line);
+        }
+        .kpi-label {
+          font-size: 11px;
+          color: var(--text-muted);
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          margin-bottom: 5px;
+        }
+        .kpi-value {
+          font-size: 24px;
+          font-weight: bold;
+        }
+        .kpi-value-small {
+          font-size: 18px;
+          font-weight: bold;
+        }
+        .kpi-unit {
+          font-size: 14px;
+          color: var(--text-muted);
+        }
+        .kpi-unit-small {
+          font-size: 12px;
+          color: var(--text-muted);
+        }
+        .kpi-sub-value {
+          font-size: 14px;
+          color: var(--text-muted);
+          margin-top: 2px;
+        }
+        .chart-container {
+          width: 100%;
+          height: 400px;
+          position: relative;
+        }
+        .empty-state {
+          position: absolute;
+          top: 0; left: 0; width: 100%; height: 100%;
+          display: flex; justify-content: center; align-items: center;
+          color: var(--text-muted); z-index: 10; font-size: 16px;
+          font-weight: 500; pointer-events: none;
+        }
+        .bottom-panel {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+        }
+        .stats-card, .logs-card {
+          background-color: var(--bg-card);
+          border-radius: 16px;
+          padding: 25px;
+          border: 1px solid var(--grid-line);
+        }
+        .logs-card {
+          max-height: 250px;
+          overflow-y: auto;
+        }
+        .section-title {
+          margin: 0 0 20px 0;
+          font-size: 16px;
+          color: var(--text-muted);
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+        .stats-inner-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+        }
+        .stat-row {
+          display: flex;
+          justify-content: space-between;
+          font-size: 14px;
+          margin-bottom: 5px;
+        }
+        .log-item {
+          display: flex;
+          gap: 15px;
+          font-size: 13px;
+          padding: 10px;
+          background-color: var(--bg-kpi);
+          border-radius: 6px;
+        }
+
         @keyframes pulse {
-          0% { boxShadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-          70% { boxShadow: 0 0 0 8px rgba(16, 185, 129, 0); }
-          100% { boxShadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+          0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+          70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
         ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #1E293B; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-track { background: var(--bg-card); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--grid-line); border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        @media (max-width: 1024px) {
+          .bottom-panel {
+            grid-template-columns: 1fr;
+          }
+        }
+        @media (max-width: 768px) {
+          .app-root {
+            padding: 20px 10px;
+          }
+          .main-card {
+            padding: 20px;
+          }
+          .header-section {
+            flex-direction: column;
+            align-items: stretch;
+          }
+          .header-details {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+          }
+          .detail-separator {
+            border-left: none;
+            padding-left: 0;
+          }
+          .export-btn {
+            width: 100%;
+            margin-top: 10px;
+          }
+          .kpi-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+        @media (max-width: 480px) {
+          .kpi-grid {
+            grid-template-columns: 1fr;
+          }
+          .stats-inner-grid {
+            grid-template-columns: 1fr;
+          }
+          .chart-container {
+            height: 300px;
+          }
+          .header-title {
+            font-size: 20px;
+          }
+        }
       `}</style>
     </div>
   );
