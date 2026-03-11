@@ -23,6 +23,8 @@ function App() {
   const [isServerConnected, setIsServerConnected] = useState(false);
   const [isNodeActive, setIsNodeActive] = useState(false);
   const [eventLogs, setEventLogs] = useState([]);
+  const [nodeMeta, setNodeMeta] = useState({ mac: 'XX:XX:XX:XX:XX:XX', fw: 'v1.0.0-prod' });
+  const [displayUptime, setDisplayUptime] = useState(0);
 
   const [hiddenSeries, setHiddenSeries] = useState({
     voltage: false,
@@ -53,6 +55,14 @@ function App() {
         setIsNodeActive(false);
       }, 15000);
 
+      if (incomingArray.length > 0) {
+        setNodeMeta({
+          mac: incomingArray[0].mac || 'XX:XX:XX:XX:XX:XX',
+          fw: incomingArray[0].fw || 'v1.0.0-prod'
+        });
+        setDisplayUptime(incomingArray[incomingArray.length - 1].uptime);
+      }
+
       setDataPoints((prevData) => {
         const newData = [...prevData, ...incomingArray];
         return newData.slice(-100);
@@ -82,6 +92,16 @@ function App() {
       if (watchdogTimer.current) clearTimeout(watchdogTimer.current);
     };
   }, []);
+
+  useEffect(() => {
+    let interval;
+    if (isNodeActive) {
+      interval = setInterval(() => {
+        setDisplayUptime(prev => prev + 1000);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isNodeActive]);
 
   const handleLegendClick = (e) => {
     const { dataKey } = e;
@@ -150,7 +170,6 @@ function App() {
   return (
     <div className="app-root">
       <div className="layout-wrapper">
-
         <div className="main-card">
           <div className="header-section">
             <div className="header-content">
@@ -164,8 +183,8 @@ function App() {
                   }}></div>
                   <strong style={{ color: statusColor }}>{statusText}</strong>
                 </div>
-                <span className="detail-separator">MAC: <strong style={{ color: colors.textMain }}>XX:XX:XX:XX:XX:XX</strong></span>
-                <span className="detail-separator">FW: <strong style={{ color: colors.textMain }}>v1.0.0-prod</strong></span>
+                <span className="detail-separator">MAC: <strong style={{ color: colors.textMain }}>{nodeMeta.mac}</strong></span>
+                <span className="detail-separator">FW: <strong style={{ color: colors.textMain }}>{nodeMeta.fw}</strong></span>
                 <span className="detail-separator">Points: <strong style={{ color: colors.textMain }}>{dataPoints.length}</strong>/100</span>
               </div>
             </div>
@@ -196,7 +215,9 @@ function App() {
             </div>
             <div className="kpi-card" style={{ borderLeft: `4px solid ${colors.info}` }}>
               <div className="kpi-label">Hardware Uptime</div>
-              <div className="kpi-value-small" style={{ color: colors.textMain, paddingTop: '4px' }}>{formatUptime(latestData.uptime)}</div>
+              <div className="kpi-value-small" style={{ color: colors.textMain, paddingTop: '4px' }}>
+                {formatUptime(displayUptime)}
+              </div>
             </div>
             <div className="kpi-card" style={{ borderLeft: `4px solid ${colors.info}` }}>
               <div className="kpi-label">Data Throughput</div>
@@ -276,7 +297,6 @@ function App() {
             )}
           </div>
         </div>
-
       </div>
       <style>{`
         :root {
