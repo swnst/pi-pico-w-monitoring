@@ -183,11 +183,11 @@ function App() {
               <div className="kpi-label">Ext. Temperature</div>
               <div className="kpi-value" style={{ color: colors.extTemp }}>{latestData.ext_temp.toFixed(2)} <span className="kpi-unit">°C</span></div>
             </div>
-            <div className="kpi-card" style={{ borderLeft: `4px solid ${latestData.core_temp > 45 ? colors.warning : colors.coreTemp}`, borderColor: latestData.core_temp > 45 ? colors.warning : colors.gridLine }}>
+            <div className="kpi-card" style={{ borderLeft: `4px solid ${latestData.core_temp > 45 ? colors.warning : colors.coreTemp}` }}>
               <div className="kpi-label">Core Temperature</div>
               <div className="kpi-value" style={{ color: latestData.core_temp > 45 ? colors.warning : colors.coreTemp }}>{latestData.core_temp.toFixed(2)} <span className="kpi-unit">°C</span></div>
             </div>
-            <div className="kpi-card" style={{ borderLeft: `4px solid ${latestData.rssi < -80 ? colors.warning : colors.rssi}`, borderColor: latestData.rssi < -80 ? colors.warning : colors.gridLine }}>
+            <div className="kpi-card" style={{ borderLeft: `4px solid ${latestData.rssi < -80 ? colors.warning : colors.rssi}` }}>
               <div className="kpi-label">Signal / RAM</div>
               <div className="kpi-value-small" style={{ color: colors.textMain }}>
                 {latestData.rssi} <span className="kpi-unit-small">dBm</span>
