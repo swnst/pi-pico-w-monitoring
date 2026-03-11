@@ -4,7 +4,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 
-const socket = io('https://pico-telemetry-backend.onrender.com', {
+const socket = io('https://pi-pico-w-monitoring.onrender.com/', {
   transports: ['websocket']
 });
 
