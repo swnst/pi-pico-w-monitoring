@@ -31,7 +31,11 @@ const telemetrySchema = new mongoose.Schema({
     core_temp: Number,
     rssi: Number,
     free_ram: Number,
-    server_timestamp: { type: Date, default: Date.now }
+    server_timestamp: {
+        type: Date,
+        default: Date.now,
+        expires: 21600
+    }
 });
 const Telemetry = mongoose.model('Telemetry', telemetrySchema);
 

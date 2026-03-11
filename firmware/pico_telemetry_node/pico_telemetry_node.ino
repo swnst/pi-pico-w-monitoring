@@ -2,6 +2,7 @@
 #include <WebServer.h>
 #include <EEPROM.h>
 #include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 #include <time.h>
 
@@ -77,7 +78,7 @@ void handleSave() {
     String newSSID = server.arg("ssid");
     String newPass = server.arg("pass");
     saveWiFiCredentials(newSSID, newPass);
-    server.send(200, "text/html", "<html><body style='background:#0F172A;color:#fff;text-align:center;margin-top:20%'><h2>Saved Successfully!</h2><p>Rebooting Pico W to connect to new network...</p></body></html>");
+    server.send(200, "text/html", "<html><body style='background:#0F172A;color:#fff;text-align:center;margin-top:20%'><h2>Saved Successfully!</h2><p>Rebooting Pico W...</p></body></html>");
     delay(2000);
     rp2040.reboot();
   } else {
@@ -97,7 +98,6 @@ void setup() {
   if (savedSSID.length() > 0) {
     WiFi.begin(savedSSID.c_str(), savedPass.c_str());
     unsigned long startAttemptTime = millis();
-    
     while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 15000) {
       delay(500);
     }
@@ -106,17 +106,20 @@ void setup() {
   if (WiFi.status() != WL_CONNECTED) {
     isAPMode = true;
     WiFi.mode(WIFI_AP);
-    WiFi.softAP("PicoW_Config_Node"); 
-    
+    WiFi.softAP("PicoW_Config_Node");
     server.on("/", HTTP_GET, handleRoot);
     server.on("/save", HTTP_POST, handleSave);
     server.begin();
-  } 
-  else {
+  } else {
     configTime(7 * 3600, 0, "pool.ntp.org", "time.nist.gov");
-    struct tm timeinfo;
-    if (getLocalTime(&timeinfo, 10000)) {
-      isTimeSynced = true;
+    unsigned long startWait = millis();
+    while (millis() - startWait < 10000) {
+      time_t now = time(nullptr);
+      if (now > 1000000000) {
+        isTimeSynced = true;
+        break;
+      }
+      delay(500);
     }
   }
 }
@@ -158,10 +161,8 @@ void loop() {
   if (dataIndex >= BUFFER_SIZE) {
     if (WiFi.status() == WL_CONNECTED) {
       JsonDocument doc;
-      JsonArray array = doc.to<JsonArray>();
-
       for (int i = 0; i < BUFFER_SIZE; i++) {
-        JsonObject obj = array.add<JsonObject>();
+        JsonObject obj = doc.add<JsonObject>();
         obj["time"] = buffer[i].timeStr;
         obj["uptime"] = buffer[i].uptime;
         obj["voltage"] = buffer[i].voltage;
@@ -174,11 +175,14 @@ void loop() {
       String jsonPayload;
       serializeJson(doc, jsonPayload);
 
+      WiFiClientSecure client;
+      client.setInsecure();
       HTTPClient http;
-      http.begin(serverUrl);
-      http.addHeader("Content-Type", "application/json");
-      http.POST(jsonPayload);
-      http.end();
+      if (http.begin(client, serverUrl)) {
+        http.addHeader("Content-Type", "application/json");
+        int httpResponseCode = http.POST(jsonPayload);
+        http.end();
+      }
     }
     dataIndex = 0;
   }
