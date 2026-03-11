@@ -14,7 +14,7 @@ const float V_MAX = 3.3;
 const float T_MIN = 20.00;
 const float T_MAX = 50.00;
 
-const String FW_VERSION = "v1.1.0-prod"; 
+const String FW_VERSION = "v1.1.0-prod";
 String macAddress = "XX:XX:XX:XX:XX:XX";
 
 const char* serverUrl = "https://pi-pico-w-monitoring.onrender.com/api/telemetry";
@@ -33,7 +33,7 @@ struct TelemetryData {
   uint32_t free_ram;
 };
 
-const int BUFFER_SIZE = 50;
+const int BUFFER_SIZE = 10;
 TelemetryData buffer[BUFFER_SIZE];
 int dataIndex = 0;
 
@@ -114,7 +114,7 @@ void setup() {
     server.on("/save", HTTP_POST, handleSave);
     server.begin();
   } else {
-    macAddress = WiFi.macAddress(); 
+    macAddress = WiFi.macAddress();
     configTime(7 * 3600, 0, "pool.ntp.org", "time.nist.gov");
     unsigned long startWait = millis();
     while (millis() - startWait < 10000) {
@@ -162,11 +162,13 @@ void loop() {
 
   dataIndex++;
 
-  if (dataIndex >= BUFFER_SIZE) {
+if (dataIndex >= BUFFER_SIZE) {
     if (WiFi.status() == WL_CONNECTED) {
       JsonDocument doc;
+      JsonArray array = doc.to<JsonArray>(); 
+      
       for (int i = 0; i < BUFFER_SIZE; i++) {
-        JsonObject obj = doc.add<JsonObject>();
+        JsonObject obj = array.add<JsonObject>();
         obj["time"] = buffer[i].timeStr;
         obj["uptime"] = buffer[i].uptime;
         obj["voltage"] = buffer[i].voltage;
@@ -182,15 +184,25 @@ void loop() {
       serializeJson(doc, jsonPayload);
 
       WiFiClientSecure client;
-      client.setInsecure();
+      client.setInsecure(); 
+
       HTTPClient http;
-      if (http.begin(client, serverUrl)) {
+      if (http.begin(client, serverUrl)) { 
         http.addHeader("Content-Type", "application/json");
+        
         int httpResponseCode = http.POST(jsonPayload);
+        
+        if (httpResponseCode > 0) {
+          Serial.printf("[HTTP] POST Success, Code: %d\n", httpResponseCode);
+        } else {
+          Serial.printf("[HTTP] POST Failed, Error: %s\n", http.errorToString(httpResponseCode).c_str());
+        }
+        
         http.end();
+      } else {
+        Serial.println("[HTTP] TLS Connection Initialization Failed");
       }
     }
     dataIndex = 0;
   }
-  delay(100);
 }
