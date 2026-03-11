@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { io } from 'socket.io-client';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 
-const socket = io('https://pi-pico-w-monitoring.onrender.com/', {
+const socket = io('https://pico-telemetry-backend.onrender.com', {
   transports: ['websocket']
 });
 
@@ -20,7 +20,8 @@ const formatUptime = (ms) => {
 
 function App() {
   const [dataPoints, setDataPoints] = useState([]);
-  const [isConnected, setIsConnected] = useState(false);
+  const [isServerConnected, setIsServerConnected] = useState(false);
+  const [isNodeActive, setIsNodeActive] = useState(false);
   const [eventLogs, setEventLogs] = useState([]);
 
   const [hiddenSeries, setHiddenSeries] = useState({
@@ -29,11 +30,29 @@ function App() {
     core_temp: false
   });
 
+  const watchdogTimer = useRef(null);
+
   useEffect(() => {
-    socket.on('connect', () => setIsConnected(true));
-    socket.on('disconnect', () => setIsConnected(false));
+    socket.on('connect', () => {
+      setIsServerConnected(true);
+    });
+
+    socket.on('disconnect', () => {
+      setIsServerConnected(false);
+      setIsNodeActive(false);
+    });
 
     socket.on('telemetry_stream', (incomingArray) => {
+      setIsNodeActive(true);
+
+      if (watchdogTimer.current) {
+        clearTimeout(watchdogTimer.current);
+      }
+
+      watchdogTimer.current = setTimeout(() => {
+        setIsNodeActive(false);
+      }, 15000);
+
       setDataPoints((prevData) => {
         const newData = [...prevData, ...incomingArray];
         return newData.slice(-100);
@@ -60,6 +79,7 @@ function App() {
       socket.off('connect');
       socket.off('disconnect');
       socket.off('telemetry_stream');
+      if (watchdogTimer.current) clearTimeout(watchdogTimer.current);
     };
   }, []);
 
@@ -117,6 +137,16 @@ function App() {
     rssi: '#A855F7', warning: '#F59E0B', danger: '#EF4444', info: '#3B82F6'
   };
 
+  let statusColor = colors.danger;
+  let statusText = "SYSTEM OFFLINE";
+  if (isServerConnected && !isNodeActive) {
+    statusColor = colors.warning;
+    statusText = "WAITING FOR NODE";
+  } else if (isServerConnected && isNodeActive) {
+    statusColor = colors.extTemp;
+    statusText = "NODE ONLINE";
+  }
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: colors.bgFull, color: colors.textMain, fontFamily: 'system-ui, sans-serif', padding: '40px 20px', display: 'flex', justifyContent: 'center' }}>
       <div style={{ width: '100%', maxWidth: '1400px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -129,11 +159,11 @@ function App() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <div style={{
                     width: '10px', height: '10px', borderRadius: '50%',
-                    backgroundColor: isConnected ? colors.extTemp : colors.danger,
-                    boxShadow: `0 0 12px ${isConnected ? colors.extTemp : colors.danger}`,
-                    animation: isConnected ? 'pulse 2s infinite' : 'none'
+                    backgroundColor: statusColor,
+                    boxShadow: `0 0 12px ${statusColor}`,
+                    animation: isNodeActive ? 'pulse 2s infinite' : 'none'
                   }}></div>
-                  <strong style={{ color: isConnected ? colors.textMain : colors.danger }}>{isConnected ? "ONLINE" : "OFFLINE"}</strong>
+                  <strong style={{ color: statusColor }}>{statusText}</strong>
                 </div>
                 <span style={{ borderLeft: `1px solid ${colors.gridLine}`, paddingLeft: '15px' }}>MAC: <strong>XX:XX:XX:XX:XX:XX</strong></span>
                 <span style={{ borderLeft: `1px solid ${colors.gridLine}`, paddingLeft: '15px' }}>FW: <strong>v1.0.0-prod</strong></span>
