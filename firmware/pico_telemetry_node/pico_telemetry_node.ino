@@ -55,7 +55,7 @@ String readSSID() {
   String ssid = "";
   for (int i = 0; i < 32; ++i) {
     char c = EEPROM.read(i);
-    if (c == 0) break;
+    if (c == 0 || c == 255) break;
     ssid += c;
   }
   return ssid;
@@ -65,7 +65,7 @@ String readPassword() {
   String pass = "";
   for (int i = 0; i < 32; ++i) {
     char c = EEPROM.read(32 + i);
-    if (c == 0) break;
+    if (c == 0 || c == 255) break;
     pass += c;
   }
   return pass;
@@ -112,7 +112,6 @@ void handleRoot() {
       data.forEach(net => {
         let opt = document.createElement('option');
         opt.value = net.ssid;
-        // แสดงชื่อพร้อมความแรงสัญญาณ (dBm)
         opt.textContent = `${net.ssid} (${net.rssi} dBm)`;
         select.appendChild(opt);
       });
@@ -171,10 +170,16 @@ void setup() {
   String savedPass = readPassword();
 
   WiFi.mode(WIFI_STA);
+  WiFi.disconnect(true);
+  delay(500);
+
+  savedSSID.trim();
+  savedPass.trim();
+
   if (savedSSID.length() > 0) {
     WiFi.begin(savedSSID.c_str(), savedPass.c_str());
     unsigned long startAttemptTime = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 5000) {
+    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 10000) {
       delay(500);
     }
   }
@@ -282,6 +287,7 @@ void loop() {
         int httpResponseCode = http.POST(jsonPayload);
         http.end();
       }
+      client.stop();
     }
     dataIndex = 0;
   }
