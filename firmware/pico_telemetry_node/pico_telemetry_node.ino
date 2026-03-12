@@ -1,5 +1,6 @@
 #include <WiFi.h>
 #include <WebServer.h>
+#include <DNSServer.h>
 #include <EEPROM.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
@@ -14,12 +15,15 @@ const float V_MAX = 3.3;
 const float T_MIN = 20.00;
 const float T_MAX = 50.00;
 
-const String FW_VERSION = "v1.1.0-prod";
+const String FW_VERSION = "v1.2.0-captive";
 String macAddress = "XX:XX:XX:XX:XX:XX";
-
 const char* serverUrl = "https://pi-pico-w-monitoring.onrender.com/api/telemetry";
 
+const byte DNS_PORT = 53;
+IPAddress apIP(192, 168, 4, 1);
+DNSServer dnsServer;
 WebServer server(80);
+
 bool isAPMode = false;
 bool isTimeSynced = false;
 
@@ -68,12 +72,78 @@ String readPassword() {
 }
 
 void handleRoot() {
-  String html = "<html><head><meta name='viewport' content='width=device-width, initial-scale=1'><style>body{font-family:sans-serif;background:#0F172A;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}form{background:#1E293B;padding:30px;border-radius:10px;box-shadow:0 10px 25px rgba(0,0,0,0.5);}input{display:block;width:100%;margin:10px 0 20px;padding:10px;border-radius:5px;border:none;}input[type='submit']{background:#3B82F6;color:#fff;font-weight:bold;cursor:pointer;}</style></head><body>";
-  html += "<form action='/save' method='POST'><h2>Edge Node Setup</h2>";
-  html += "<label>WiFi Name (SSID)</label><input type='text' name='ssid' required>";
-  html += "<label>Password</label><input type='password' name='pass' required>";
-  html += "<input type='submit' value='Save & Restart'></form></body></html>";
+  String html = R"rawliteral(
+  <!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1'>
+  <style>
+    body{font-family:system-ui,sans-serif;background:#0B1120;color:#F8FAFC;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;padding:20px;box-sizing:border-box;}
+    .card{background:#1E293B;padding:30px;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.5);width:100%;max-width:400px;border:1px solid #334155;}
+    h2{margin-top:0;font-size:22px;color:#38BDF8;}
+    label{display:block;margin-bottom:8px;font-size:14px;color:#94A3B8;}
+    select,input{width:100%;padding:12px;margin-bottom:20px;border-radius:8px;border:1px solid #334155;background:#0F172A;color:#fff;box-sizing:border-box;font-size:16px;}
+    button{width:100%;padding:14px;background:#2563EB;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:bold;cursor:pointer;transition:0.2s;}
+    button:hover{background:#1D4ED8;}
+    .spinner{display:inline-block;width:20px;height:20px;border:3px solid rgba(255,255,255,.3);border-radius:50%;border-top-color:#fff;animation:spin 1s ease-in-out infinite;margin-right:10px;vertical-align:middle;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+  </style></head><body>
+  <div class='card'>
+    <h2>Edge Node Provisioning</h2>
+    <form action='/save' method='POST'>
+      <label>Available Networks</label>
+      <select id='ssid_select' name='ssid'>
+        <option value=''>Loading networks...</option>
+      </select>
+      <label>WiFi Password</label>
+      <input type='password' name='pass' placeholder='Leave blank if open network'>
+      <button type='submit' id='submit_btn' disabled>
+        <span class='spinner' id='spinner'></span>Scanning Airwaves...
+      </button>
+    </form>
+  </div>
+  <script>
+    fetch('/scan').then(res => res.json()).then(data => {
+      const select = document.getElementById('ssid_select');
+      const btn = document.getElementById('submit_btn');
+      const spinner = document.getElementById('spinner');
+      select.innerHTML = '';
+      if(data.length === 0) {
+        select.innerHTML = '<option value="">No networks found</option>';
+        return;
+      }
+      data.forEach(net => {
+        let opt = document.createElement('option');
+        opt.value = net.ssid;
+        // แสดงชื่อพร้อมความแรงสัญญาณ (dBm)
+        opt.textContent = `${net.ssid} (${net.rssi} dBm)`;
+        select.appendChild(opt);
+      });
+      btn.disabled = false;
+      btn.innerHTML = 'Save & Connect';
+      spinner.style.display = 'none';
+    }).catch(err => {
+      document.getElementById('ssid_select').innerHTML = '<option value="">Scan failed. Refresh page.</option>';
+    });
+  </script>
+  </body></html>
+  )rawliteral";
+
   server.send(200, "text/html", html);
+}
+
+void handleScan() {
+  int n = WiFi.scanNetworks();
+  JsonDocument doc;
+  JsonArray array = doc.to<JsonArray>();
+
+  for (int i = 0; i < n; ++i) {
+    JsonObject obj = array.add<JsonObject>();
+    obj["ssid"] = WiFi.SSID(i);
+    obj["rssi"] = WiFi.RSSI(i);
+    delay(10);
+  }
+
+  String jsonResponse;
+  serializeJson(doc, jsonResponse);
+  server.send(200, "application/json", jsonResponse);
 }
 
 void handleSave() {
@@ -81,7 +151,10 @@ void handleSave() {
     String newSSID = server.arg("ssid");
     String newPass = server.arg("pass");
     saveWiFiCredentials(newSSID, newPass);
-    server.send(200, "text/html", "<html><body style='background:#0F172A;color:#fff;text-align:center;margin-top:20%'><h2>Saved Successfully!</h2><p>Rebooting Pico W...</p></body></html>");
+
+    String response = "<html><body style='background:#0B1120;color:#10B981;font-family:sans-serif;text-align:center;padding-top:20vh;'><h2>Configuration Saved!</h2><p>Node is restarting and connecting to <b>" + newSSID + "</b>...</p></body></html>";
+    server.send(200, "text/html", response);
+
     delay(2000);
     rp2040.reboot();
   } else {
@@ -101,7 +174,7 @@ void setup() {
   if (savedSSID.length() > 0) {
     WiFi.begin(savedSSID.c_str(), savedPass.c_str());
     unsigned long startAttemptTime = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 15000) {
+    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 5000) {
       delay(500);
     }
   }
@@ -109,9 +182,21 @@ void setup() {
   if (WiFi.status() != WL_CONNECTED) {
     isAPMode = true;
     WiFi.mode(WIFI_AP);
+    WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
     WiFi.softAP("PicoW_Config_Node");
+
+    dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+    dnsServer.start(DNS_PORT, "*", apIP);
+
     server.on("/", HTTP_GET, handleRoot);
+    server.on("/scan", HTTP_GET, handleScan);
     server.on("/save", HTTP_POST, handleSave);
+
+    server.onNotFound([]() {
+      server.sendHeader("Location", String("http://") + apIP.toString(), true);
+      server.send(302, "text/plain", "");
+    });
+
     server.begin();
   } else {
     macAddress = WiFi.macAddress();
@@ -130,15 +215,20 @@ void setup() {
 
 void loop() {
   if (isAPMode) {
+    dnsServer.processNextRequest();
     server.handleClient();
     return;
   }
 
   unsigned long currentUptime = millis();
-  int rawADC = analogRead(ADC_PIN);
+  int adc_sum = 0;
+  for (int i = 0; i < 10; i++) {
+    adc_sum += analogRead(ADC_PIN);
+    delay(2); 
+  }
+  float rawADC = adc_sum / 10.0;
   float voltage = rawADC * (V_REF / ADC_MAX);
-  float v_calc = (voltage < V_MIN) ? V_MIN : ((voltage > V_MAX) ? V_MAX : voltage);
-  float ext_temp = T_MIN + ((T_MAX - T_MIN) / (V_MAX - V_MIN)) * (v_calc - V_MIN);
+  float ext_temp = voltage * 100.0;
   float core_temp = analogReadTemp();
   int32_t current_rssi = WiFi.RSSI();
   uint32_t current_ram = rp2040.getFreeHeap();
@@ -162,11 +252,11 @@ void loop() {
 
   dataIndex++;
 
-if (dataIndex >= BUFFER_SIZE) {
+  if (dataIndex >= BUFFER_SIZE) {
     if (WiFi.status() == WL_CONNECTED) {
       JsonDocument doc;
-      JsonArray array = doc.to<JsonArray>(); 
-      
+      JsonArray array = doc.to<JsonArray>();
+
       for (int i = 0; i < BUFFER_SIZE; i++) {
         JsonObject obj = array.add<JsonObject>();
         obj["time"] = buffer[i].timeStr;
@@ -184,25 +274,16 @@ if (dataIndex >= BUFFER_SIZE) {
       serializeJson(doc, jsonPayload);
 
       WiFiClientSecure client;
-      client.setInsecure(); 
+      client.setInsecure();
 
       HTTPClient http;
-      if (http.begin(client, serverUrl)) { 
+      if (http.begin(client, serverUrl)) {
         http.addHeader("Content-Type", "application/json");
-        
         int httpResponseCode = http.POST(jsonPayload);
-        
-        if (httpResponseCode > 0) {
-          Serial.printf("[HTTP] POST Success, Code: %d\n", httpResponseCode);
-        } else {
-          Serial.printf("[HTTP] POST Failed, Error: %s\n", http.errorToString(httpResponseCode).c_str());
-        }
-        
         http.end();
-      } else {
-        Serial.println("[HTTP] TLS Connection Initialization Failed");
       }
     }
     dataIndex = 0;
   }
+  delay(100);
 }

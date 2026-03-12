@@ -39,6 +39,28 @@ const telemetrySchema = new mongoose.Schema({
 });
 const Telemetry = mongoose.model('Telemetry', telemetrySchema);
 
+app.get('/api/history', async (req, res) => {
+    try {
+        if (!MONGODB_URI) {
+            return res.status(503).json({ error: 'Database not connected' });
+        }
+
+        const mins = parseInt(req.query.mins) || 5;
+
+        const startTime = new Date(Date.now() - mins * 60 * 1000);
+
+        const history = await Telemetry.find({ server_timestamp: { $gte: startTime } })
+            .sort({ server_timestamp: -1 })
+            .limit(2000)
+            .select('-_id time uptime voltage ext_temp core_temp rssi free_ram');
+
+        res.status(200).json(history.reverse());
+    } catch (error) {
+        console.error('[API] History Fetch Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
 app.post('/api/telemetry', async (req, res) => {
     try {
         const dataBatch = req.body;

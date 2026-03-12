@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { io } from 'socket.io-client';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine
 } from 'recharts';
 
 const socket = io('https://pi-pico-w-monitoring.onrender.com', {
@@ -25,6 +25,35 @@ function App() {
   const [eventLogs, setEventLogs] = useState([]);
   const [nodeMeta, setNodeMeta] = useState({ mac: 'XX:XX:XX:XX:XX:XX', fw: 'v1.0.0-prod' });
   const [displayUptime, setDisplayUptime] = useState(0);
+  const [customMins, setCustomMins] = useState(5);
+  const [isFetchingHistory, setIsFetchingHistory] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [showAdvancedAnalytics, setShowAdvancedAnalytics] = useState(false);
+
+  const maxDataPoints = useRef(100);
+  const watchdogTimer = useRef(null);
+
+  const fetchHistoricalData = async (minutes) => {
+    setIsFetchingHistory(true);
+    try {
+      const response = await fetch(`https://pi-pico-w-monitoring.onrender.com/api/history?mins=${minutes}`);
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        maxDataPoints.current = Math.max(100, data.length + 50);
+        setDataPoints(data);
+        setDisplayUptime(data[data.length - 1].uptime);
+      }
+    } catch (error) {
+      console.error("Failed to fetch history:", error);
+    } finally {
+      setIsFetchingHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHistoricalData(5);
+  }, []);
 
   const [hiddenSeries, setHiddenSeries] = useState({
     voltage: false,
@@ -32,13 +61,8 @@ function App() {
     core_temp: false
   });
 
-  const watchdogTimer = useRef(null);
-
   useEffect(() => {
-    socket.on('connect', () => {
-      setIsServerConnected(true);
-    });
-
+    socket.on('connect', () => setIsServerConnected(true));
     socket.on('disconnect', () => {
       setIsServerConnected(false);
       setIsNodeActive(false);
@@ -46,14 +70,9 @@ function App() {
 
     socket.on('telemetry_stream', (incomingArray) => {
       setIsNodeActive(true);
+      if (watchdogTimer.current) clearTimeout(watchdogTimer.current);
 
-      if (watchdogTimer.current) {
-        clearTimeout(watchdogTimer.current);
-      }
-
-      watchdogTimer.current = setTimeout(() => {
-        setIsNodeActive(false);
-      }, 15000);
+      watchdogTimer.current = setTimeout(() => setIsNodeActive(false), 15000);
 
       if (incomingArray.length > 0) {
         setNodeMeta({
@@ -65,17 +84,17 @@ function App() {
 
       setDataPoints((prevData) => {
         const newData = [...prevData, ...incomingArray];
-        return newData.slice(-100);
+        return newData.slice(-maxDataPoints.current);
       });
 
       setEventLogs((prevLogs) => {
         let newLogs = [...prevLogs];
         incomingArray.forEach(data => {
-          if (data.core_temp > 45) {
-            newLogs.unshift({ id: Date.now() + Math.random(), time: data.time, type: 'CRITICAL', msg: `Core Temp high: ${data.core_temp.toFixed(1)}°C` });
+          if (data.ext_temp > 40) {
+            newLogs.unshift({ id: Date.now() + Math.random(), time: data.time, type: 'WARNING', msg: `High Ext Temp: ${data.ext_temp.toFixed(1)}°C` });
           }
-          if (data.voltage < 0.5 || data.voltage > 3.4) {
-            newLogs.unshift({ id: Date.now() + Math.random(), time: data.time, type: 'WARNING', msg: `Voltage anomaly: ${data.voltage.toFixed(2)}V` });
+          if (data.voltage > 1.0 || data.voltage <= 0.01) {
+            newLogs.unshift({ id: Date.now() + Math.random(), time: data.time, type: 'CRITICAL', msg: `Sensor Fault (V: ${data.voltage.toFixed(2)}V)` });
           }
           if (data.rssi < -85) {
             newLogs.unshift({ id: Date.now() + Math.random(), time: data.time, type: 'WARNING', msg: `Weak WiFi: ${data.rssi}dBm` });
@@ -96,9 +115,7 @@ function App() {
   useEffect(() => {
     let interval;
     if (isNodeActive) {
-      interval = setInterval(() => {
-        setDisplayUptime(prev => prev + 1000);
-      }, 1000);
+      interval = setInterval(() => setDisplayUptime(prev => prev + 1000), 1000);
     }
     return () => clearInterval(interval);
   }, [isNodeActive]);
@@ -112,11 +129,9 @@ function App() {
     if (dataPoints.length === 0) return;
     const headers = ["Time", "Uptime (ms)", "Voltage (V)", "Ext Temp (C)", "Core Temp (C)", "RSSI (dBm)", "Free RAM (Bytes)"];
     const csvRows = [headers.join(',')];
-
     dataPoints.forEach(row => {
       csvRows.push(`${row.time},${row.uptime},${row.voltage},${row.ext_temp},${row.core_temp},${row.rssi},${row.free_ram}`);
     });
-
     const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -130,31 +145,51 @@ function App() {
     { time: "00:00:00", uptime: 0, voltage: 0, ext_temp: 0, core_temp: 0, rssi: 0, free_ram: 0 };
 
   let samplingRate = 0;
-  let stats = { maxTemp: 0, minTemp: 0, avgTemp: 0, maxVolt: 0, minVolt: 0, avgVolt: 0 };
+  let stats = { maxTemp: 0, minTemp: 0, avgTemp: 0, maxVolt: 0, minVolt: 0, avgVolt: 0, dTdt: 0, stdDev: 0 };
 
   if (dataPoints.length > 1) {
     const firstPoint = dataPoints[0].uptime;
     const lastPoint = latestData.uptime;
     const timeDeltaSec = (lastPoint - firstPoint) / 1000;
+
     if (timeDeltaSec > 0) {
       samplingRate = (dataPoints.length - 1) / timeDeltaSec;
+      const tempDelta = latestData.ext_temp - dataPoints[0].ext_temp;
+      stats.dTdt = tempDelta / timeDeltaSec;
     }
 
-    const temps = dataPoints.map(d => d.core_temp);
+    const temps = dataPoints.map(d => d.ext_temp);
     const volts = dataPoints.map(d => d.voltage);
+
     stats.maxTemp = Math.max(...temps);
     stats.minTemp = Math.min(...temps);
     stats.avgTemp = temps.reduce((a, b) => a + b, 0) / temps.length;
     stats.maxVolt = Math.max(...volts);
     stats.minVolt = Math.min(...volts);
     stats.avgVolt = volts.reduce((a, b) => a + b, 0) / volts.length;
+
+    const variance = temps.reduce((sum, val) => sum + Math.pow(val - stats.avgTemp, 2), 0) / temps.length;
+    stats.stdDev = Math.sqrt(variance);
   }
 
-  const colors = {
-    bgFull: '#0B1120', bgCard: '#1E293B', bgKPI: '#0F172A',
-    textMain: '#F8FAFC', textMuted: '#94A3B8', gridLine: '#334155',
-    voltage: '#38BDF8', extTemp: '#10B981', coreTemp: '#F43F5E',
-    rssi: '#A855F7', warning: '#F59E0B', danger: '#EF4444', info: '#3B82F6'
+  const analyticalData = dataPoints.map((pt, i, arr) => {
+    if (i === 0) return { ...pt, dTdt: 0 };
+    const dt = (pt.uptime - arr[i - 1].uptime) / 1000;
+    const dTemp = pt.ext_temp - arr[i - 1].ext_temp;
+    const rate = dt > 0 ? (dTemp / dt) : 0;
+    return { ...pt, dTdt: parseFloat(rate.toFixed(3)) };
+  });
+
+  const colors = isDarkMode ? {
+    bgFull: '#050B14', bgCard: 'rgba(15, 23, 42, 0.65)', bgKPI: 'rgba(30, 41, 59, 0.5)',
+    textMain: '#F8FAFC', textMuted: '#94A3B8', gridLine: 'rgba(255, 255, 255, 0.08)',
+    borderGlow: 'rgba(56, 189, 248, 0.15)', voltage: '#38BDF8', extTemp: '#10B981',
+    coreTemp: '#F43F5E', rssi: '#A855F7', warning: '#FBBF24', danger: '#EF4444', info: '#3B82F6'
+  } : {
+    bgFull: '#F1F5F9', bgCard: 'rgba(255, 255, 255, 0.7)', bgKPI: 'rgba(241, 245, 249, 0.6)',
+    textMain: '#0F172A', textMuted: '#64748B', gridLine: 'rgba(0, 0, 0, 0.08)',
+    borderGlow: 'rgba(0, 0, 0, 0.05)', voltage: '#0284C7', extTemp: '#059669',
+    coreTemp: '#E11D48', rssi: '#7E22CE', warning: '#D97706', danger: '#DC2626', info: '#2563EB'
   };
 
   let statusColor = colors.danger;
@@ -170,7 +205,7 @@ function App() {
   return (
     <div className="app-root">
       <div className="layout-wrapper">
-        <div className="main-card">
+        <div className="main-card glass-panel">
           <div className="header-section">
             <div className="header-content">
               <h1 className="header-title">Pico W Edge Node Diagnostics</h1>
@@ -188,88 +223,144 @@ function App() {
                 <span className="detail-separator">Points: <strong style={{ color: colors.textMain }}>{dataPoints.length}</strong>/100</span>
               </div>
             </div>
-            <button className="export-btn" onClick={exportToCSV}>
-              Download CSV
-            </button>
+
+            <div className="header-actions">
+              <button
+                className="theme-btn"
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                title="Toggle Theme"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px' }}
+              >
+                {isDarkMode ? (
+                  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                ) : (
+                  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                )}
+              </button>
+              <button className="export-btn" onClick={exportToCSV}>
+                Download CSV
+              </button>
+            </div>
           </div>
 
           <div className="kpi-grid">
-            <div className="kpi-card" style={{ borderLeft: `4px solid ${colors.voltage}` }}>
+            <div className="kpi-card glass-kpi" style={{ borderBottom: `3px solid ${colors.voltage}` }}>
               <div className="kpi-label">Voltage (ADC)</div>
               <div className="kpi-value" style={{ color: colors.voltage }}>{latestData.voltage.toFixed(2)} <span className="kpi-unit">V</span></div>
             </div>
-            <div className="kpi-card" style={{ borderLeft: `4px solid ${colors.extTemp}` }}>
+            <div className="kpi-card glass-kpi" style={{ borderBottom: `3px solid ${colors.extTemp}` }}>
               <div className="kpi-label">Ext. Temperature</div>
               <div className="kpi-value" style={{ color: colors.extTemp }}>{latestData.ext_temp.toFixed(2)} <span className="kpi-unit">°C</span></div>
             </div>
-            <div className="kpi-card" style={{ borderLeft: `4px solid ${latestData.core_temp > 45 ? colors.warning : colors.coreTemp}` }}>
+            <div className="kpi-card glass-kpi" style={{ borderBottom: `3px solid ${latestData.core_temp > 45 ? colors.warning : colors.coreTemp}` }}>
               <div className="kpi-label">Core Temperature</div>
               <div className="kpi-value" style={{ color: latestData.core_temp > 45 ? colors.warning : colors.coreTemp }}>{latestData.core_temp.toFixed(2)} <span className="kpi-unit">°C</span></div>
             </div>
-            <div className="kpi-card" style={{ borderLeft: `4px solid ${latestData.rssi < -80 ? colors.warning : colors.rssi}` }}>
+            <div className="kpi-card glass-kpi" style={{ borderBottom: `3px solid ${latestData.rssi < -80 ? colors.warning : colors.rssi}` }}>
               <div className="kpi-label">Signal / RAM</div>
               <div className="kpi-value-small" style={{ color: colors.textMain }}>
                 {latestData.rssi} <span className="kpi-unit-small">dBm</span>
                 <div className="kpi-sub-value">{(latestData.free_ram / 1024).toFixed(1)} KB</div>
               </div>
             </div>
-            <div className="kpi-card" style={{ borderLeft: `4px solid ${colors.info}` }}>
+            <div className="kpi-card glass-kpi" style={{ borderBottom: `3px solid ${colors.info}` }}>
               <div className="kpi-label">Hardware Uptime</div>
               <div className="kpi-value-small" style={{ color: colors.textMain, paddingTop: '4px' }}>
                 {formatUptime(displayUptime)}
               </div>
             </div>
-            <div className="kpi-card" style={{ borderLeft: `4px solid ${colors.info}` }}>
+            <div className="kpi-card glass-kpi" style={{ borderBottom: `3px solid ${colors.info}` }}>
               <div className="kpi-label">Data Throughput</div>
               <div className="kpi-value" style={{ color: colors.info }}>{samplingRate.toFixed(1)} <span className="kpi-unit">Hz</span></div>
             </div>
           </div>
 
+          <div className="glass-kpi" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '20px', alignItems: 'center', padding: '15px', borderRadius: '8px' }}>
+            <span style={{ color: colors.textMuted, fontSize: '14px', fontWeight: 'bold' }}>Historical Range:</span>
+            <button className="time-btn" onClick={() => fetchHistoricalData(1)}>1 Min</button>
+            <button className="time-btn" onClick={() => fetchHistoricalData(5)}>5 Mins</button>
+            <button className="time-btn" onClick={() => fetchHistoricalData(60)}>1 Hour</button>
+            <div style={{ borderLeft: `1px solid ${colors.gridLine}`, height: '24px', margin: '0 10px' }}></div>
+            <input
+              type="number"
+              min="1" max="360"
+              value={customMins}
+              onChange={(e) => setCustomMins(e.target.value)}
+              style={{ background: isDarkMode ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.5)', border: `1px solid ${colors.gridLine}`, color: colors.textMain, padding: '8px', borderRadius: '6px', width: '80px', textAlign: 'center' }}
+            />
+            <span style={{ color: colors.textMuted, fontSize: '14px' }}>Mins</span>
+            <button
+              className="time-btn"
+              style={{ background: isFetchingHistory ? colors.textMuted : colors.extTemp, color: '#fff' }}
+              onClick={() => fetchHistoricalData(customMins)}
+              disabled={isFetchingHistory}
+            >
+              {isFetchingHistory ? 'Loading...' : 'Fetch Custom'}
+            </button>
+          </div>
+
           <div className="chart-container">
             {dataPoints.length === 0 && (
-              <div className="empty-state">
-                Waiting for Edge Node Telemetry...
+              <div className="premium-empty-state">
+                <div className="radar-pulse"></div>
+                <div style={{ color: colors.textMuted, fontWeight: '600', letterSpacing: '1px' }}>Awaiting Telemetry Stream...</div>
               </div>
             )}
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={dataPoints} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorVoltage" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={colors.voltage} stopOpacity={0.6} />
+                    <stop offset="5%" stopColor={colors.voltage} stopOpacity={0.5} />
                     <stop offset="95%" stopColor={colors.voltage} stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorExtTemp" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={colors.extTemp} stopOpacity={0.6} />
+                    <stop offset="5%" stopColor={colors.extTemp} stopOpacity={0.5} />
                     <stop offset="95%" stopColor={colors.extTemp} stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorCoreTemp" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={colors.coreTemp} stopOpacity={0.6} />
+                    <stop offset="5%" stopColor={colors.coreTemp} stopOpacity={0.5} />
                     <stop offset="95%" stopColor={colors.coreTemp} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={colors.gridLine} vertical={false} />
                 <XAxis dataKey="time" stroke={colors.textMuted} tick={{ fill: colors.textMuted, fontSize: 12 }} axisLine={{ stroke: colors.gridLine }} />
-                <YAxis yAxisId="left" stroke={colors.voltage} tick={{ fill: colors.voltage, fontSize: 12 }} domain={[0, 3.5]} axisLine={false} tickLine={false} />
-                <YAxis yAxisId="right" orientation="right" stroke={colors.coreTemp} tick={{ fill: colors.coreTemp, fontSize: 12 }} domain={[15, 60]} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ backgroundColor: colors.bgKPI, borderColor: colors.gridLine, borderRadius: '8px' }} itemStyle={{ fontWeight: '600' }} cursor={{ stroke: colors.gridLine }} />
-                <Legend verticalAlign="top" height={40} onClick={handleLegendClick} wrapperStyle={{ cursor: 'pointer', paddingBottom: '10px', fontSize: '14px' }} />
-                <Area hide={hiddenSeries.voltage} yAxisId="left" type="monotone" dataKey="voltage" name="Voltage" stroke={colors.voltage} strokeWidth={2} fill="url(#colorVoltage)" dot={false} isAnimationActive={false} />
-                <Area hide={hiddenSeries.ext_temp} yAxisId="right" type="monotone" dataKey="ext_temp" name="Ext Temp" stroke={colors.extTemp} strokeWidth={2} fill="url(#colorExtTemp)" dot={false} isAnimationActive={false} />
-                <Area hide={hiddenSeries.core_temp} yAxisId="right" type="monotone" dataKey="core_temp" name="Core Temp" stroke={colors.coreTemp} strokeWidth={2} fill="url(#colorCoreTemp)" dot={false} isAnimationActive={false} />
+                <YAxis yAxisId="left" stroke={colors.voltage} tick={{ fill: colors.voltage, fontSize: 12 }} domain={[0, 1.0]} axisLine={false} tickLine={false} />
+                <YAxis yAxisId="right" orientation="right" stroke={colors.extTemp} tick={{ fill: colors.extTemp, fontSize: 12 }} domain={[20, 50]} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ backgroundColor: colors.bgKPI, borderColor: colors.gridLine, borderRadius: '8px', backdropFilter: 'blur(8px)', color: colors.textMain }} itemStyle={{ fontWeight: '600' }} cursor={{ stroke: colors.gridLine }} />
+                <Legend verticalAlign="top" height={40} onClick={handleLegendClick} wrapperStyle={{ cursor: 'pointer', paddingBottom: '10px', fontSize: '14px', color: colors.textMain }} />
+                <ReferenceLine y={40} yAxisId="right" stroke={colors.warning} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: 'Overheat Threshold (40°C)', fill: colors.warning, fontSize: 12 }} />
+                <Area hide={hiddenSeries.voltage} yAxisId="left" type="monotone" dataKey="voltage" name="Voltage" stroke={colors.voltage} strokeWidth={3} fill="url(#colorVoltage)" dot={false} isAnimationActive={false} />
+                <Area hide={hiddenSeries.ext_temp} yAxisId="right" type="monotone" dataKey="ext_temp" name="Ext Temp" stroke={colors.extTemp} strokeWidth={3} fill="url(#colorExtTemp)" dot={false} isAnimationActive={false} />
+                <Area hide={hiddenSeries.core_temp} yAxisId="right" type="monotone" dataKey="core_temp" name="Core Temp" stroke={colors.coreTemp} strokeWidth={3} fill="url(#colorCoreTemp)" dot={false} isAnimationActive={false} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         <div className="bottom-panel">
-          <div className="stats-card">
+          <div className="stats-card glass-panel">
             <h3 className="section-title">Statistical Summary (Window: 100 Pts)</h3>
             <div className="stats-inner-grid">
               <div>
-                <div style={{ color: colors.coreTemp, fontWeight: 'bold', marginBottom: '10px' }}>Core Temperature</div>
+                <div style={{ color: colors.extTemp, fontWeight: 'bold', marginBottom: '10px' }}>Ext. Temperature</div>
                 <div className="stat-row"><span>MAX:</span> <strong>{stats.maxTemp.toFixed(2)} °C</strong></div>
                 <div className="stat-row"><span>MIN:</span> <strong>{stats.minTemp.toFixed(2)} °C</strong></div>
                 <div className="stat-row"><span>AVG:</span> <strong>{stats.avgTemp.toFixed(2)} °C</strong></div>
+                <div className="stat-row" style={{ alignItems: 'center' }}>
+                  <span>Trend (dT/dt):</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <strong style={{ color: stats.dTdt > 0.5 ? colors.danger : colors.textMain }}>
+                      {stats.dTdt > 0 ? '+' : ''}{stats.dTdt.toFixed(3)} °C/s
+                    </strong>
+                    <button
+                      onClick={() => setShowAdvancedAnalytics(!showAdvancedAnalytics)}
+                      style={{ background: colors.voltage, color: '#fff', border: 'none', borderRadius: '4px', padding: '2px 8px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
+                    >
+                      {showAdvancedAnalytics ? 'Close Chart' : 'View Chart'}
+                    </button>
+                  </div>
+                </div>
+                <div className="stat-row"><span>Noise (StdDev):</span> <strong>±{stats.stdDev.toFixed(3)}</strong></div>
               </div>
               <div>
                 <div style={{ color: colors.voltage, fontWeight: 'bold', marginBottom: '10px' }}>ADC Voltage</div>
@@ -280,14 +371,14 @@ function App() {
             </div>
           </div>
 
-          <div className="logs-card">
+          <div className="logs-card glass-panel">
             <h3 className="section-title">System Event Logs</h3>
             {eventLogs.length === 0 ? (
               <div style={{ color: colors.textMuted, fontSize: '14px', fontStyle: 'italic' }}>No anomalies detected in the current session.</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {eventLogs.map(log => (
-                  <div key={log.id} className="log-item" style={{ borderLeft: `3px solid ${log.type === 'CRITICAL' ? colors.danger : colors.warning}` }}>
+                  <div key={log.id} className="log-item glass-kpi" style={{ borderLeft: `3px solid ${log.type === 'CRITICAL' ? colors.danger : colors.warning}` }}>
                     <span style={{ color: colors.textMuted, whiteSpace: 'nowrap' }}>[{log.time}]</span>
                     <strong style={{ color: log.type === 'CRITICAL' ? colors.danger : colors.warning }}>{log.type}</strong>
                     <span style={{ color: colors.textMain }}>{log.msg}</span>
@@ -297,241 +388,89 @@ function App() {
             )}
           </div>
         </div>
+
+        {showAdvancedAnalytics && (
+          <div className="glass-panel" style={{ animation: 'fadeIn 0.3s ease' }}>
+            <h3 className="section-title" style={{ color: colors.voltage }}>Thermal Rate of Change Analysis (dT/dt)</h3>
+            <p style={{ fontSize: '13px', color: colors.textMuted, marginBottom: '15px' }}>
+              กราฟแสดงความเร็วในการเปลี่ยนแปลงอุณหภูมิต่อวินาที หากกราฟพุ่งทะลุเส้นอ้างอิง (0.5 °C/s) แสดงถึงภาวะความร้อนสะสมผิดปกติ (Thermal Runaway)
+            </p>
+            <div style={{ width: '100%', height: '250px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={analyticalData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={colors.gridLine} vertical={false} />
+                  <XAxis dataKey="time" stroke={colors.textMuted} tick={{ fill: colors.textMuted, fontSize: 11 }} />
+                  <YAxis stroke={colors.voltage} tick={{ fill: colors.voltage, fontSize: 11 }} domain={['auto', 'auto']} />
+                  <Tooltip contentStyle={{ backgroundColor: colors.bgKPI, borderColor: colors.gridLine, borderRadius: '8px', color: colors.textMain }} />
+                  <ReferenceLine y={0.5} stroke={colors.danger} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: 'Critical Heating Rate (+0.5°C/s)', fill: colors.danger, fontSize: 11 }} />
+                  <ReferenceLine y={0} stroke={colors.textMuted} />
+                  <Area type="monotone" dataKey="dTdt" name="Temp Velocity (°C/s)" stroke={colors.voltage} strokeWidth={2} fill={colors.bgKPI} dot={false} isAnimationActive={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
       </div>
+
       <style>{`
         :root {
-          --bg-full: #0B1120;
-          --bg-card: #1E293B;
-          --bg-kpi: #0F172A;
-          --grid-line: #334155;
-          --text-muted: #94A3B8;
+          --bg-full: ${colors.bgFull};
+          --text-main: ${colors.textMain};
+          --text-muted: ${colors.textMuted};
+          --grid-line: ${colors.gridLine};
         }
-        .app-root {
-          min-height: 100vh;
-          background-color: var(--bg-full);
-          color: #F8FAFC;
-          font-family: system-ui, sans-serif;
-          padding: 40px 20px;
-          display: flex;
-          justify-content: center;
-        }
-        .layout-wrapper {
-          width: 100%;
-          max-width: 1400px;
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-        }
-        .main-card {
-          background-color: var(--bg-card);
-          border-radius: 16px;
-          padding: 30px;
-          border: 1px solid var(--grid-line);
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
-        }
-        .header-section {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          border-bottom: 1px solid var(--grid-line);
-          padding-bottom: 20px;
-          margin-bottom: 25px;
-          gap: 15px;
-        }
-        .header-title {
-          margin: 0 0 10px 0;
-          font-size: 26px;
-          font-weight: 800;
-          letter-spacing: -0.5px;
-        }
-        .header-details {
-          display: flex;
-          align-items: center;
-          gap: 15px;
-          font-size: 13px;
-          color: var(--text-muted);
-          flex-wrap: wrap;
-        }
-        .detail-item {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-        .status-dot {
-          width: 10px;
-          height: 10px;
-          border-radius: 50%;
-        }
-        .detail-separator {
-          border-left: 1px solid var(--grid-line);
-          padding-left: 15px;
-        }
-        .export-btn {
-          background-color: #2563EB;
-          color: white;
-          border: none;
-          padding: 12px 24px;
-          border-radius: 8px;
-          cursor: pointer;
-          font-weight: bold;
-          font-size: 14px;
-          transition: background 0.2s;
-          white-space: nowrap;
-        }
-        .export-btn:hover {
-          background-color: #1D4ED8;
-        }
-        .kpi-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-          gap: 15px;
-          margin-bottom: 30px;
-        }
-        .kpi-card {
-          background-color: var(--bg-kpi);
-          padding: 15px;
-          border-radius: 8px;
-          border: 1px solid var(--grid-line);
-        }
-        .kpi-label {
-          font-size: 11px;
-          color: var(--text-muted);
-          text-transform: uppercase;
-          letter-spacing: 1px;
-          margin-bottom: 5px;
-        }
-        .kpi-value {
-          font-size: 24px;
-          font-weight: bold;
-        }
-        .kpi-value-small {
-          font-size: 18px;
-          font-weight: bold;
-        }
-        .kpi-unit {
-          font-size: 14px;
-          color: var(--text-muted);
-        }
-        .kpi-unit-small {
-          font-size: 12px;
-          color: var(--text-muted);
-        }
-        .kpi-sub-value {
-          font-size: 14px;
-          color: var(--text-muted);
-          margin-top: 2px;
-        }
-        .chart-container {
-          width: 100%;
-          height: 400px;
-          position: relative;
-        }
-        .empty-state {
-          position: absolute;
-          top: 0; left: 0; width: 100%; height: 100%;
-          display: flex; justify-content: center; align-items: center;
-          color: var(--text-muted); z-index: 10; font-size: 16px;
-          font-weight: 500; pointer-events: none;
-        }
-        .bottom-panel {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-        }
-        .stats-card, .logs-card {
-          background-color: var(--bg-card);
-          border-radius: 16px;
-          padding: 25px;
-          border: 1px solid var(--grid-line);
-        }
-        .logs-card {
-          max-height: 250px;
-          overflow-y: auto;
-        }
-        .section-title {
-          margin: 0 0 20px 0;
-          font-size: 16px;
-          color: var(--text-muted);
-          text-transform: uppercase;
-          letter-spacing: 1px;
-        }
-        .stats-inner-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-        }
-        .stat-row {
-          display: flex;
-          justify-content: space-between;
-          font-size: 14px;
-          margin-bottom: 5px;
-        }
-        .log-item {
-          display: flex;
-          gap: 15px;
-          font-size: 13px;
-          padding: 10px;
-          background-color: var(--bg-kpi);
-          border-radius: 6px;
-        }
-
-        @keyframes pulse {
-          0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-          70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
-          100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-        }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: var(--bg-card); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb { background: var(--grid-line); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
-
-        @media (max-width: 1024px) {
-          .bottom-panel {
-            grid-template-columns: 1fr;
-          }
-        }
+        body { background-color: var(--bg-full); transition: background-color 0.4s ease; }
+        .app-root { min-height: 100vh; color: var(--text-main); font-family: 'Inter', system-ui, sans-serif; padding: 40px 20px; display: flex; justify-content: center; transition: color 0.4s ease; }
+        .glass-panel { background: ${colors.bgCard}; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid ${colors.gridLine}; box-shadow: 0 10px 40px -10px rgba(0,0,0, ${isDarkMode ? '0.5' : '0.1'}); border-radius: 16px; padding: 30px; position: relative; overflow: hidden; }
+        .glass-panel::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, ${colors.borderGlow}, transparent); }
+        .glass-kpi { background: ${colors.bgKPI}; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid ${colors.gridLine}; border-radius: 12px; }
+        .layout-wrapper { width: 100%; max-width: 1400px; display: flex; flex-direction: column; gap: 24px; }
+        .header-section { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--grid-line); padding-bottom: 20px; margin-bottom: 25px; gap: 15px; }
+        .header-title { margin: 0 0 10px 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px; background: linear-gradient(to right, ${colors.voltage}, ${colors.extTemp}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header-details { display: flex; align-items: center; gap: 15px; font-size: 13px; color: var(--text-muted); flex-wrap: wrap; }
+        .detail-item { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .detail-separator { border-left: 1px solid var(--grid-line); padding-left: 15px; }
+        .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .export-btn, .theme-btn, .time-btn { color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s ease; white-space: nowrap; }
+        .export-btn { background-color: #2563EB; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
+        .export-btn:hover { background-color: #1D4ED8; transform: translateY(-1px); }
+        .theme-btn { background-color: ${isDarkMode ? '#334155' : '#CBD5E1'}; color: var(--text-main); }
+        .theme-btn:hover { background-color: ${isDarkMode ? '#475569' : '#94A3B8'}; }
+        .time-btn { background-color: ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}; color: var(--text-main); border: 1px solid var(--grid-line); }
+        .time-btn:hover { background-color: ${colors.voltage}; color: #fff; border-color: ${colors.voltage}; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .kpi-card { padding: 18px 15px; transition: transform 0.2s; }
+        .kpi-card:hover { transform: translateY(-3px); }
+        .kpi-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-weight: 600; }
+        .kpi-value { font-size: 28px; font-weight: 800; letter-spacing: -1px; }
+        .kpi-value-small { font-size: 20px; font-weight: 700; }
+        .kpi-unit { font-size: 14px; color: var(--text-muted); font-weight: 500; letter-spacing: 0; }
+        .kpi-unit-small { font-size: 12px; color: var(--text-muted); }
+        .kpi-sub-value { font-size: 13px; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
+        .chart-container { width: 100%; height: 420px; position: relative; margin-top: 10px; }
+        .premium-empty-state { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 20px; z-index: 10; pointer-events: none; }
+        .radar-pulse { width: 40px; height: 40px; border-radius: 50%; background-color: ${colors.info}; animation: radarPing 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
+        @keyframes radarPing { 75%, 100% { transform: scale(2.5); opacity: 0; } }
+        .bottom-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .logs-card { max-height: 280px; overflow-y: auto; }
+        .section-title { margin: 0 0 20px 0; font-size: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; }
+        .stats-inner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .stat-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px; border-bottom: 1px dashed var(--grid-line); padding-bottom: 4px; }
+        .log-item { display: flex; gap: 15px; font-size: 13px; padding: 12px; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--grid-line); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+        @media (max-width: 1024px) { .bottom-panel { grid-template-columns: 1fr; } }
         @media (max-width: 768px) {
-          .app-root {
-            padding: 20px 10px;
-          }
-          .main-card {
-            padding: 20px;
-          }
-          .header-section {
-            flex-direction: column;
-            align-items: stretch;
-          }
-          .header-details {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 8px;
-          }
-          .detail-separator {
-            border-left: none;
-            padding-left: 0;
-          }
-          .export-btn {
-            width: 100%;
-            margin-top: 10px;
-          }
-          .kpi-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
+          .app-root { padding: 15px; } .glass-panel { padding: 20px; } .header-section { flex-direction: column; align-items: flex-start; }
+          .header-actions { width: 100%; justify-content: space-between; margin-top: 10px; } .export-btn, .theme-btn { flex: 1; text-align: center; }
+          .kpi-grid { grid-template-columns: repeat(2, 1fr); }
         }
-        @media (max-width: 480px) {
-          .kpi-grid {
-            grid-template-columns: 1fr;
-          }
-          .stats-inner-grid {
-            grid-template-columns: 1fr;
-          }
-          .chart-container {
-            height: 300px;
-          }
-          .header-title {
-            font-size: 20px;
-          }
-        }
+        @media (max-width: 480px) { .kpi-grid, .stats-inner-grid { grid-template-columns: 1fr; } .chart-container { height: 320px; } .header-title { font-size: 22px; } }
       `}</style>
     </div>
   );
