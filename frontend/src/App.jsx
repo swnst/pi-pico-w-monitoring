@@ -4,6 +4,11 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine
 } from 'recharts';
 
+const link = document.createElement('link');
+link.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700;800&display=swap';
+link.rel = 'stylesheet';
+document.head.appendChild(link);
+
 const socket = io('https://pi-pico-w-monitoring.onrender.com', {
   transports: ['websocket']
 });
@@ -16,6 +21,36 @@ const formatUptime = (ms) => {
   const m = Math.floor((totalSec % 3600) / 60);
   const s = totalSec % 60;
   return `${d}d ${h}h ${m}m ${s}s`;
+};
+
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div style={{
+        background: 'rgba(15, 23, 42, 0.75)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+        borderRadius: '12px',
+        padding: '16px',
+        color: '#F8FAFC',
+        minWidth: '200px'
+      }}>
+        <p className="tabular-nums" style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '700', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px', color: '#94A3B8' }}>{label}</p>
+        {payload.map((entry, index) => (
+          <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '8px 0', fontSize: '14px', fontWeight: '600' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: entry.color }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: entry.color, boxShadow: `0 0 8px ${entry.color}` }}></span>
+              {entry.name}
+            </span>
+            <span className="tabular-nums" style={{ color: '#F8FAFC' }}>{Number(entry.value).toFixed(2)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
 };
 
 function App() {
@@ -172,6 +207,43 @@ function App() {
     stats.stdDev = Math.sqrt(variance);
   }
 
+  let predictiveAlert = null;
+
+  if (dataPoints.length > 20) {
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+    const n = dataPoints.length;
+    const startUptime = dataPoints[0].uptime;
+
+    dataPoints.forEach(pt => {
+      const x = (pt.uptime - startUptime) / 1000;
+      const y = pt.ext_temp;
+      sumX += x;
+      sumY += y;
+      sumXY += x * y;
+      sumX2 += x * x;
+    });
+
+    const m = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const c = (sumY - m * sumX) / n;
+
+    if (m > 0.05) {
+      const threshold = 40.0;
+      const targetRelativeSec = (threshold - c) / m;
+      const currentRelativeSec = (latestData.uptime - startUptime) / 1000;
+
+      const secondsToCritical = targetRelativeSec - currentRelativeSec;
+
+      if (secondsToCritical > 0 && secondsToCritical <= 180) {
+        const confidence = Math.min((n / 100) * 100, 99.9);
+        predictiveAlert = {
+          secondsLeft: Math.round(secondsToCritical),
+          confidence: confidence.toFixed(1),
+          slope: m.toFixed(3)
+        };
+      }
+    }
+  }
+
   const analyticalData = dataPoints.map((pt, i, arr) => {
     if (i === 0) return { ...pt, dTdt: 0 };
     const dt = (pt.uptime - arr[i - 1].uptime) / 1000;
@@ -210,6 +282,35 @@ function App() {
     <div className="app-root">
       <div className="mesh-bg"></div>
       <div className="layout-wrapper">
+        {predictiveAlert && (
+          <div style={{
+            background: 'linear-gradient(90deg, #7F1D1D 0%, #B91C1C 100%)',
+            border: '1px solid #EF4444',
+            borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            boxShadow: '0 10px 30px rgba(239, 68, 68, 0.4)',
+            animation: 'pulse 1.5s infinite',
+            marginBottom: '-8px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+              <div style={{ background: '#FECACA', color: '#991B1B', padding: '10px', borderRadius: '50%' }}>
+                <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+              </div>
+              <div>
+                <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '800', color: '#FEF2F2', letterSpacing: '0.5px' }}>PREDICTIVE WARNING: THERMAL RUNAWAY IMMINENT</h3>
+                <div style={{ fontSize: '14px', color: '#FCA5A5', display: 'flex', gap: '15px' }}>
+                  <span>OLS Model Gradient: <strong>+{predictiveAlert.slope} °C/s</strong></span>
+                  <span>Model Confidence: <strong>{predictiveAlert.confidence}%</strong></span>
+                </div>
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '12px', color: '#FCA5A5', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '1px' }}>Time to Critical (40°C)</div>
+              <div className="tabular-nums" style={{ fontSize: '36px', fontWeight: '900', color: '#FFFFFF', textShadow: '0 0 20px rgba(255,255,255,0.5)' }}>
+                {predictiveAlert.secondsLeft} <span style={{ fontSize: '16px', color: '#FCA5A5' }}>sec</span>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="bento-panel glass-panel">
           <div className="header-section">
             <div className="header-content">
@@ -333,8 +434,7 @@ function App() {
                 <XAxis dataKey="time" stroke={colors.textMuted} tick={{ fill: colors.textMuted, fontSize: 12 }} axisLine={{ stroke: colors.gridLine }} className="tabular-nums" />
                 <YAxis yAxisId="left" stroke={colors.voltage} tick={{ fill: colors.voltage, fontSize: 12 }} domain={[0, 1.0]} axisLine={false} tickLine={false} className="tabular-nums" />
                 <YAxis yAxisId="right" orientation="right" stroke={colors.extTemp} tick={{ fill: colors.extTemp, fontSize: 12 }} domain={[20, 50]} axisLine={false} tickLine={false} className="tabular-nums" />
-                <Tooltip contentStyle={{ backgroundColor: colors.bgKPI, borderColor: colors.borderGlow, borderRadius: '12px', backdropFilter: 'blur(12px)', color: colors.textMain, boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }} itemStyle={{ fontWeight: '600' }} cursor={{ stroke: colors.gridLine }} labelStyle={{ fontWeight: '700', marginBottom: '4px' }} />
-                <Legend verticalAlign="top" height={40} onClick={handleLegendClick} wrapperStyle={{ cursor: 'pointer', paddingBottom: '10px', fontSize: '13px', color: colors.textMain, fontWeight: '600' }} />
+                <Tooltip content={<CustomTooltip />} cursor={{ stroke: colors.gridLine, strokeWidth: 1, strokeDasharray: '4 4' }} />                <Legend verticalAlign="top" height={40} onClick={handleLegendClick} wrapperStyle={{ cursor: 'pointer', paddingBottom: '10px', fontSize: '13px', color: colors.textMain, fontWeight: '600' }} />
                 <ReferenceLine y={40} yAxisId="right" stroke={colors.warning} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: 'Overheat Threshold (40°C)', fill: colors.warning, fontSize: 11, fontWeight: '700' }} />
                 <Area hide={hiddenSeries.voltage} yAxisId="left" type="monotone" dataKey="voltage" name="Voltage" stroke={colors.voltage} strokeWidth={2.5} fill="url(#colorVoltage)" dot={false} isAnimationActive={false} />
                 <Area hide={hiddenSeries.ext_temp} yAxisId="right" type="monotone" dataKey="ext_temp" name="Ext Temp" stroke={colors.extTemp} strokeWidth={2.5} fill="url(#colorExtTemp)" dot={false} isAnimationActive={false} />
@@ -409,7 +509,7 @@ function App() {
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.gridLine} vertical={false} />
                   <XAxis dataKey="time" stroke={colors.textMuted} tick={{ fill: colors.textMuted, fontSize: 11 }} className="tabular-nums" />
                   <YAxis stroke={colors.voltage} tick={{ fill: colors.voltage, fontSize: 11 }} domain={['auto', 'auto']} className="tabular-nums" />
-                  <Tooltip contentStyle={{ backgroundColor: colors.bgKPI, borderColor: colors.borderGlow, borderRadius: '12px', backdropFilter: 'blur(12px)', color: colors.textMain, boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }} itemStyle={{ fontWeight: '600' }} cursor={{ stroke: colors.gridLine }} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ stroke: colors.gridLine, strokeWidth: 1, strokeDasharray: '4 4' }} />
                   <ReferenceLine y={0.5} stroke={colors.danger} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: 'Critical Heating Rate (+0.5°C/s)', fill: colors.danger, fontSize: 11, fontWeight: '700' }} />
                   <ReferenceLine y={0} stroke={colors.gridLine} />
                   <Area type="monotone" dataKey="dTdt" name="Temp Velocity (°C/s)" stroke={colors.voltage} strokeWidth={2.5} fill={colors.glowVoltage} dot={false} isAnimationActive={false} />
@@ -429,8 +529,6 @@ function App() {
         }
         body { background-color: var(--bg-full); transition: background-color 0.5s ease; margin: 0; overflow-x: hidden; }
         
-        .tabular-nums { font-variant-numeric: tabular-nums; letter-spacing: -0.3px; }
-        
         .mesh-bg {
           position: fixed; top: -50%; left: -50%; width: 200%; height: 200%; z-index: -1; pointer-events: none;
           background: radial-gradient(circle at 50% 50%, ${colors.glowVoltage} 0%, transparent 40%),
@@ -440,6 +538,7 @@ function App() {
         }
 
         .app-root { min-height: 100vh; color: var(--text-main); font-family: 'Inter', system-ui, sans-serif; padding: 40px 24px; display: flex; justify-content: center; transition: color 0.5s ease; }
+        .tabular-nums { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; letter-spacing: -0.5px; }
         
         .glass-panel { 
           background: ${colors.bgCard}; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); 
