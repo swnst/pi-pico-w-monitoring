@@ -181,15 +181,19 @@ function App() {
   });
 
   const colors = isDarkMode ? {
-    bgFull: '#050B14', bgCard: 'rgba(15, 23, 42, 0.65)', bgKPI: 'rgba(30, 41, 59, 0.5)',
-    textMain: '#F8FAFC', textMuted: '#94A3B8', gridLine: 'rgba(255, 255, 255, 0.08)',
-    borderGlow: 'rgba(56, 189, 248, 0.15)', voltage: '#38BDF8', extTemp: '#10B981',
-    coreTemp: '#F43F5E', rssi: '#A855F7', warning: '#FBBF24', danger: '#EF4444', info: '#3B82F6'
+    bgFull: '#030712', bgCard: 'rgba(15, 23, 42, 0.4)', bgKPI: 'rgba(30, 41, 59, 0.3)',
+    textMain: '#F8FAFC', textMuted: '#94A3B8', gridLine: 'rgba(255, 255, 255, 0.05)',
+    borderGlow: 'rgba(255, 255, 255, 0.08)', voltage: '#38BDF8', extTemp: '#34D399',
+    coreTemp: '#FB7185', rssi: '#C084FC', warning: '#FBBF24', danger: '#EF4444', info: '#60A5FA',
+    glowVoltage: 'rgba(56, 189, 248, 0.12)', glowExtTemp: 'rgba(52, 211, 153, 0.12)',
+    glowCoreTemp: 'rgba(251, 113, 133, 0.12)', glowRssi: 'rgba(192, 132, 252, 0.12)', glowInfo: 'rgba(96, 165, 250, 0.12)'
   } : {
-    bgFull: '#F1F5F9', bgCard: 'rgba(255, 255, 255, 0.7)', bgKPI: 'rgba(241, 245, 249, 0.6)',
-    textMain: '#0F172A', textMuted: '#64748B', gridLine: 'rgba(0, 0, 0, 0.08)',
+    bgFull: '#F8FAFC', bgCard: 'rgba(255, 255, 255, 0.7)', bgKPI: 'rgba(241, 245, 249, 0.5)',
+    textMain: '#0F172A', textMuted: '#64748B', gridLine: 'rgba(0, 0, 0, 0.05)',
     borderGlow: 'rgba(0, 0, 0, 0.05)', voltage: '#0284C7', extTemp: '#059669',
-    coreTemp: '#E11D48', rssi: '#7E22CE', warning: '#D97706', danger: '#DC2626', info: '#2563EB'
+    coreTemp: '#E11D48', rssi: '#7E22CE', warning: '#D97706', danger: '#DC2626', info: '#2563EB',
+    glowVoltage: 'rgba(2, 132, 199, 0.1)', glowExtTemp: 'rgba(5, 150, 105, 0.1)',
+    glowCoreTemp: 'rgba(225, 29, 72, 0.1)', glowRssi: 'rgba(126, 34, 206, 0.1)', glowInfo: 'rgba(37, 99, 235, 0.1)'
   };
 
   let statusColor = colors.danger;
@@ -204,8 +208,9 @@ function App() {
 
   return (
     <div className="app-root">
+      <div className="mesh-bg"></div>
       <div className="layout-wrapper">
-        <div className="main-card glass-panel">
+        <div className="bento-panel glass-panel">
           <div className="header-section">
             <div className="header-content">
               <h1 className="header-title">Pico W Edge Node Diagnostics</h1>
@@ -218,84 +223,86 @@ function App() {
                   }}></div>
                   <strong style={{ color: statusColor }}>{statusText}</strong>
                 </div>
-                <span className="detail-separator">MAC: <strong style={{ color: colors.textMain }}>{nodeMeta.mac}</strong></span>
-                <span className="detail-separator">FW: <strong style={{ color: colors.textMain }}>{nodeMeta.fw}</strong></span>
-                <span className="detail-separator">Points: <strong style={{ color: colors.textMain }}>{dataPoints.length}</strong>/100</span>
+                <span className="detail-separator">MAC: <strong className="tabular-nums" style={{ color: colors.textMain }}>{nodeMeta.mac}</strong></span>
+                <span className="detail-separator">FW: <strong className="tabular-nums" style={{ color: colors.textMain }}>{nodeMeta.fw}</strong></span>
+                <span className="detail-separator">Points: <strong className="tabular-nums" style={{ color: colors.textMain }}>{dataPoints.length}</strong>/100</span>
               </div>
             </div>
 
             <div className="header-actions">
               <button
-                className="theme-btn"
+                className="theme-btn premium-btn"
                 onClick={() => setIsDarkMode(!isDarkMode)}
                 title="Toggle Theme"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px' }}
               >
                 {isDarkMode ? (
-                  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                 ) : (
-                  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
                 )}
               </button>
-              <button className="export-btn" onClick={exportToCSV}>
-                Download CSV
+              <button className="export-btn premium-btn" onClick={exportToCSV}>
+                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                CSV
               </button>
             </div>
           </div>
 
           <div className="kpi-grid">
-            <div className="kpi-card glass-kpi" style={{ borderBottom: `3px solid ${colors.voltage}` }}>
+            <div className="kpi-card glass-kpi" style={{ boxShadow: `0 8px 32px ${colors.glowVoltage}`, borderColor: colors.borderGlow }}>
               <div className="kpi-label">Voltage (ADC)</div>
-              <div className="kpi-value" style={{ color: colors.voltage }}>{latestData.voltage.toFixed(2)} <span className="kpi-unit">V</span></div>
+              <div className="kpi-value tabular-nums" style={{ color: colors.voltage }}>{latestData.voltage.toFixed(2)} <span className="kpi-unit">V</span></div>
             </div>
-            <div className="kpi-card glass-kpi" style={{ borderBottom: `3px solid ${colors.extTemp}` }}>
+            <div className="kpi-card glass-kpi" style={{ boxShadow: `0 8px 32px ${colors.glowExtTemp}`, borderColor: colors.borderGlow }}>
               <div className="kpi-label">Ext. Temperature</div>
-              <div className="kpi-value" style={{ color: colors.extTemp }}>{latestData.ext_temp.toFixed(2)} <span className="kpi-unit">°C</span></div>
+              <div className="kpi-value tabular-nums" style={{ color: colors.extTemp }}>{latestData.ext_temp.toFixed(2)} <span className="kpi-unit">°C</span></div>
             </div>
-            <div className="kpi-card glass-kpi" style={{ borderBottom: `3px solid ${latestData.core_temp > 45 ? colors.warning : colors.coreTemp}` }}>
+            <div className="kpi-card glass-kpi" style={{ boxShadow: `0 8px 32px ${latestData.core_temp > 45 ? 'rgba(245,158,11,0.15)' : colors.glowCoreTemp}`, borderColor: colors.borderGlow }}>
               <div className="kpi-label">Core Temperature</div>
-              <div className="kpi-value" style={{ color: latestData.core_temp > 45 ? colors.warning : colors.coreTemp }}>{latestData.core_temp.toFixed(2)} <span className="kpi-unit">°C</span></div>
+              <div className="kpi-value tabular-nums" style={{ color: latestData.core_temp > 45 ? colors.warning : colors.coreTemp }}>{latestData.core_temp.toFixed(2)} <span className="kpi-unit">°C</span></div>
             </div>
-            <div className="kpi-card glass-kpi" style={{ borderBottom: `3px solid ${latestData.rssi < -80 ? colors.warning : colors.rssi}` }}>
+            <div className="kpi-card glass-kpi" style={{ boxShadow: `0 8px 32px ${colors.glowRssi}`, borderColor: colors.borderGlow }}>
               <div className="kpi-label">Signal / RAM</div>
-              <div className="kpi-value-small" style={{ color: colors.textMain }}>
+              <div className="kpi-value-small tabular-nums" style={{ color: colors.textMain }}>
                 {latestData.rssi} <span className="kpi-unit-small">dBm</span>
-                <div className="kpi-sub-value">{(latestData.free_ram / 1024).toFixed(1)} KB</div>
+                <div className="kpi-sub-value tabular-nums">{(latestData.free_ram / 1024).toFixed(1)} KB</div>
               </div>
             </div>
-            <div className="kpi-card glass-kpi" style={{ borderBottom: `3px solid ${colors.info}` }}>
+            <div className="kpi-card glass-kpi" style={{ boxShadow: `0 8px 32px ${colors.glowInfo}`, borderColor: colors.borderGlow }}>
               <div className="kpi-label">Hardware Uptime</div>
-              <div className="kpi-value-small" style={{ color: colors.textMain, paddingTop: '4px' }}>
+              <div className="kpi-value-small tabular-nums" style={{ color: colors.textMain, paddingTop: '4px' }}>
                 {formatUptime(displayUptime)}
               </div>
             </div>
-            <div className="kpi-card glass-kpi" style={{ borderBottom: `3px solid ${colors.info}` }}>
+            <div className="kpi-card glass-kpi" style={{ boxShadow: `0 8px 32px ${colors.glowInfo}`, borderColor: colors.borderGlow }}>
               <div className="kpi-label">Data Throughput</div>
-              <div className="kpi-value" style={{ color: colors.info }}>{samplingRate.toFixed(1)} <span className="kpi-unit">Hz</span></div>
+              <div className="kpi-value tabular-nums" style={{ color: colors.info }}>{samplingRate.toFixed(1)} <span className="kpi-unit">Hz</span></div>
             </div>
           </div>
 
-          <div className="glass-kpi" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '20px', alignItems: 'center', padding: '15px', borderRadius: '8px' }}>
-            <span style={{ color: colors.textMuted, fontSize: '14px', fontWeight: 'bold' }}>Historical Range:</span>
+          <div className="glass-kpi flex-toolbar" style={{ borderColor: colors.borderGlow }}>
+            <span style={{ color: colors.textMuted, fontSize: '13px', fontWeight: '700', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Historical Range</span>
+            <div className="divider-vertical"></div>
             <button className="time-btn" onClick={() => fetchHistoricalData(1)}>1 Min</button>
             <button className="time-btn" onClick={() => fetchHistoricalData(5)}>5 Mins</button>
             <button className="time-btn" onClick={() => fetchHistoricalData(60)}>1 Hour</button>
-            <div style={{ borderLeft: `1px solid ${colors.gridLine}`, height: '24px', margin: '0 10px' }}></div>
+            <div className="divider-vertical"></div>
             <input
               type="number"
               min="1" max="360"
               value={customMins}
               onChange={(e) => setCustomMins(e.target.value)}
-              style={{ background: isDarkMode ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.5)', border: `1px solid ${colors.gridLine}`, color: colors.textMain, padding: '8px', borderRadius: '6px', width: '80px', textAlign: 'center' }}
+              className="tabular-nums custom-time-input"
+              style={{ background: isDarkMode ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.8)', borderColor: colors.borderGlow, color: colors.textMain }}
             />
-            <span style={{ color: colors.textMuted, fontSize: '14px' }}>Mins</span>
+            <span style={{ color: colors.textMuted, fontSize: '13px' }}>Mins</span>
             <button
-              className="time-btn"
-              style={{ background: isFetchingHistory ? colors.textMuted : colors.extTemp, color: '#fff' }}
+              className="time-btn fetch-btn"
+              style={{ background: isFetchingHistory ? colors.textMuted : colors.extTemp, color: '#fff', borderColor: 'transparent' }}
               onClick={() => fetchHistoricalData(customMins)}
               disabled={isFetchingHistory}
             >
-              {isFetchingHistory ? 'Loading...' : 'Fetch Custom'}
+              {isFetchingHistory ? 'Loading...' : 'Fetch'}
             </button>
           </div>
 
@@ -310,78 +317,79 @@ function App() {
               <AreaChart data={dataPoints} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorVoltage" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={colors.voltage} stopOpacity={0.5} />
+                    <stop offset="5%" stopColor={colors.voltage} stopOpacity={0.4} />
                     <stop offset="95%" stopColor={colors.voltage} stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorExtTemp" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={colors.extTemp} stopOpacity={0.5} />
+                    <stop offset="5%" stopColor={colors.extTemp} stopOpacity={0.4} />
                     <stop offset="95%" stopColor={colors.extTemp} stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorCoreTemp" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={colors.coreTemp} stopOpacity={0.5} />
+                    <stop offset="5%" stopColor={colors.coreTemp} stopOpacity={0.4} />
                     <stop offset="95%" stopColor={colors.coreTemp} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={colors.gridLine} vertical={false} />
-                <XAxis dataKey="time" stroke={colors.textMuted} tick={{ fill: colors.textMuted, fontSize: 12 }} axisLine={{ stroke: colors.gridLine }} />
-                <YAxis yAxisId="left" stroke={colors.voltage} tick={{ fill: colors.voltage, fontSize: 12 }} domain={[0, 1.0]} axisLine={false} tickLine={false} />
-                <YAxis yAxisId="right" orientation="right" stroke={colors.extTemp} tick={{ fill: colors.extTemp, fontSize: 12 }} domain={[20, 50]} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ backgroundColor: colors.bgKPI, borderColor: colors.gridLine, borderRadius: '8px', backdropFilter: 'blur(8px)', color: colors.textMain }} itemStyle={{ fontWeight: '600' }} cursor={{ stroke: colors.gridLine }} />
-                <Legend verticalAlign="top" height={40} onClick={handleLegendClick} wrapperStyle={{ cursor: 'pointer', paddingBottom: '10px', fontSize: '14px', color: colors.textMain }} />
-                <ReferenceLine y={40} yAxisId="right" stroke={colors.warning} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: 'Overheat Threshold (40°C)', fill: colors.warning, fontSize: 12 }} />
-                <Area hide={hiddenSeries.voltage} yAxisId="left" type="monotone" dataKey="voltage" name="Voltage" stroke={colors.voltage} strokeWidth={3} fill="url(#colorVoltage)" dot={false} isAnimationActive={false} />
-                <Area hide={hiddenSeries.ext_temp} yAxisId="right" type="monotone" dataKey="ext_temp" name="Ext Temp" stroke={colors.extTemp} strokeWidth={3} fill="url(#colorExtTemp)" dot={false} isAnimationActive={false} />
-                <Area hide={hiddenSeries.core_temp} yAxisId="right" type="monotone" dataKey="core_temp" name="Core Temp" stroke={colors.coreTemp} strokeWidth={3} fill="url(#colorCoreTemp)" dot={false} isAnimationActive={false} />
+                <XAxis dataKey="time" stroke={colors.textMuted} tick={{ fill: colors.textMuted, fontSize: 12 }} axisLine={{ stroke: colors.gridLine }} className="tabular-nums" />
+                <YAxis yAxisId="left" stroke={colors.voltage} tick={{ fill: colors.voltage, fontSize: 12 }} domain={[0, 1.0]} axisLine={false} tickLine={false} className="tabular-nums" />
+                <YAxis yAxisId="right" orientation="right" stroke={colors.extTemp} tick={{ fill: colors.extTemp, fontSize: 12 }} domain={[20, 50]} axisLine={false} tickLine={false} className="tabular-nums" />
+                <Tooltip contentStyle={{ backgroundColor: colors.bgKPI, borderColor: colors.borderGlow, borderRadius: '12px', backdropFilter: 'blur(12px)', color: colors.textMain, boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }} itemStyle={{ fontWeight: '600' }} cursor={{ stroke: colors.gridLine }} labelStyle={{ fontWeight: '700', marginBottom: '4px' }} />
+                <Legend verticalAlign="top" height={40} onClick={handleLegendClick} wrapperStyle={{ cursor: 'pointer', paddingBottom: '10px', fontSize: '13px', color: colors.textMain, fontWeight: '600' }} />
+                <ReferenceLine y={40} yAxisId="right" stroke={colors.warning} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: 'Overheat Threshold (40°C)', fill: colors.warning, fontSize: 11, fontWeight: '700' }} />
+                <Area hide={hiddenSeries.voltage} yAxisId="left" type="monotone" dataKey="voltage" name="Voltage" stroke={colors.voltage} strokeWidth={2.5} fill="url(#colorVoltage)" dot={false} isAnimationActive={false} />
+                <Area hide={hiddenSeries.ext_temp} yAxisId="right" type="monotone" dataKey="ext_temp" name="Ext Temp" stroke={colors.extTemp} strokeWidth={2.5} fill="url(#colorExtTemp)" dot={false} isAnimationActive={false} />
+                <Area hide={hiddenSeries.core_temp} yAxisId="right" type="monotone" dataKey="core_temp" name="Core Temp" stroke={colors.coreTemp} strokeWidth={2.5} fill="url(#colorCoreTemp)" dot={false} isAnimationActive={false} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         <div className="bottom-panel">
-          <div className="stats-card glass-panel">
+          <div className="bento-panel glass-panel">
             <h3 className="section-title">Statistical Summary (Window: 100 Pts)</h3>
             <div className="stats-inner-grid">
               <div>
-                <div style={{ color: colors.extTemp, fontWeight: 'bold', marginBottom: '10px' }}>Ext. Temperature</div>
-                <div className="stat-row"><span>MAX:</span> <strong>{stats.maxTemp.toFixed(2)} °C</strong></div>
-                <div className="stat-row"><span>MIN:</span> <strong>{stats.minTemp.toFixed(2)} °C</strong></div>
-                <div className="stat-row"><span>AVG:</span> <strong>{stats.avgTemp.toFixed(2)} °C</strong></div>
+                <div style={{ color: colors.extTemp, fontWeight: '700', marginBottom: '12px', letterSpacing: '0.5px' }}>Ext. Temperature</div>
+                <div className="stat-row"><span>MAX:</span> <strong className="tabular-nums">{stats.maxTemp.toFixed(2)} °C</strong></div>
+                <div className="stat-row"><span>MIN:</span> <strong className="tabular-nums">{stats.minTemp.toFixed(2)} °C</strong></div>
+                <div className="stat-row"><span>AVG:</span> <strong className="tabular-nums">{stats.avgTemp.toFixed(2)} °C</strong></div>
                 <div className="stat-row" style={{ alignItems: 'center' }}>
                   <span>Trend (dT/dt):</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <strong style={{ color: stats.dTdt > 0.5 ? colors.danger : colors.textMain }}>
+                    <strong className="tabular-nums" style={{ color: stats.dTdt > 0.5 ? colors.danger : colors.textMain }}>
                       {stats.dTdt > 0 ? '+' : ''}{stats.dTdt.toFixed(3)} °C/s
                     </strong>
                     <button
                       onClick={() => setShowAdvancedAnalytics(!showAdvancedAnalytics)}
-                      style={{ background: colors.voltage, color: '#fff', border: 'none', borderRadius: '4px', padding: '2px 8px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
+                      className="premium-btn chart-toggle-btn"
+                      style={{ background: colors.voltage, color: '#fff' }}
                     >
-                      {showAdvancedAnalytics ? 'Close Chart' : 'View Chart'}
+                      {showAdvancedAnalytics ? 'Close' : 'Chart'}
                     </button>
                   </div>
                 </div>
-                <div className="stat-row"><span>Noise (StdDev):</span> <strong>±{stats.stdDev.toFixed(3)}</strong></div>
+                <div className="stat-row"><span>Noise (StdDev):</span> <strong className="tabular-nums">±{stats.stdDev.toFixed(3)}</strong></div>
               </div>
               <div>
-                <div style={{ color: colors.voltage, fontWeight: 'bold', marginBottom: '10px' }}>ADC Voltage</div>
-                <div className="stat-row"><span>MAX:</span> <strong>{stats.maxVolt.toFixed(2)} V</strong></div>
-                <div className="stat-row"><span>MIN:</span> <strong>{stats.minVolt.toFixed(2)} V</strong></div>
-                <div className="stat-row"><span>AVG:</span> <strong>{stats.avgVolt.toFixed(2)} V</strong></div>
+                <div style={{ color: colors.voltage, fontWeight: '700', marginBottom: '12px', letterSpacing: '0.5px' }}>ADC Voltage</div>
+                <div className="stat-row"><span>MAX:</span> <strong className="tabular-nums">{stats.maxVolt.toFixed(2)} V</strong></div>
+                <div className="stat-row"><span>MIN:</span> <strong className="tabular-nums">{stats.minVolt.toFixed(2)} V</strong></div>
+                <div className="stat-row"><span>AVG:</span> <strong className="tabular-nums">{stats.avgVolt.toFixed(2)} V</strong></div>
               </div>
             </div>
           </div>
 
-          <div className="logs-card glass-panel">
+          <div className="bento-panel glass-panel logs-card">
             <h3 className="section-title">System Event Logs</h3>
             {eventLogs.length === 0 ? (
-              <div style={{ color: colors.textMuted, fontSize: '14px', fontStyle: 'italic' }}>No anomalies detected in the current session.</div>
+              <div style={{ color: colors.textMuted, fontSize: '13px', fontStyle: 'italic', display: 'flex', alignItems: 'center', height: '100%', justifyContent: 'center' }}>No anomalies detected in the current session.</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {eventLogs.map(log => (
-                  <div key={log.id} className="log-item glass-kpi" style={{ borderLeft: `3px solid ${log.type === 'CRITICAL' ? colors.danger : colors.warning}` }}>
-                    <span style={{ color: colors.textMuted, whiteSpace: 'nowrap' }}>[{log.time}]</span>
-                    <strong style={{ color: log.type === 'CRITICAL' ? colors.danger : colors.warning }}>{log.type}</strong>
-                    <span style={{ color: colors.textMain }}>{log.msg}</span>
+                  <div key={log.id} className="log-item glass-kpi" style={{ borderLeft: `3px solid ${log.type === 'CRITICAL' ? colors.danger : colors.warning}`, borderColor: colors.borderGlow, borderLeftColor: log.type === 'CRITICAL' ? colors.danger : colors.warning }}>
+                    <span className="tabular-nums" style={{ color: colors.textMuted, whiteSpace: 'nowrap' }}>[{log.time}]</span>
+                    <strong style={{ color: log.type === 'CRITICAL' ? colors.danger : colors.warning, width: '70px' }}>{log.type}</strong>
+                    <span className="tabular-nums" style={{ color: colors.textMain }}>{log.msg}</span>
                   </div>
                 ))}
               </div>
@@ -390,21 +398,21 @@ function App() {
         </div>
 
         {showAdvancedAnalytics && (
-          <div className="glass-panel" style={{ animation: 'fadeIn 0.3s ease' }}>
+          <div className="bento-panel glass-panel" style={{ animation: 'slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}>
             <h3 className="section-title" style={{ color: colors.voltage }}>Thermal Rate of Change Analysis (dT/dt)</h3>
-            <p style={{ fontSize: '13px', color: colors.textMuted, marginBottom: '15px' }}>
+            <p style={{ fontSize: '13px', color: colors.textMuted, marginBottom: '20px', lineHeight: '1.5' }}>
               กราฟแสดงความเร็วในการเปลี่ยนแปลงอุณหภูมิต่อวินาที หากกราฟพุ่งทะลุเส้นอ้างอิง (0.5 °C/s) แสดงถึงภาวะความร้อนสะสมผิดปกติ (Thermal Runaway)
             </p>
-            <div style={{ width: '100%', height: '250px' }}>
+            <div style={{ width: '100%', height: '260px' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={analyticalData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.gridLine} vertical={false} />
-                  <XAxis dataKey="time" stroke={colors.textMuted} tick={{ fill: colors.textMuted, fontSize: 11 }} />
-                  <YAxis stroke={colors.voltage} tick={{ fill: colors.voltage, fontSize: 11 }} domain={['auto', 'auto']} />
-                  <Tooltip contentStyle={{ backgroundColor: colors.bgKPI, borderColor: colors.gridLine, borderRadius: '8px', color: colors.textMain }} />
-                  <ReferenceLine y={0.5} stroke={colors.danger} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: 'Critical Heating Rate (+0.5°C/s)', fill: colors.danger, fontSize: 11 }} />
-                  <ReferenceLine y={0} stroke={colors.textMuted} />
-                  <Area type="monotone" dataKey="dTdt" name="Temp Velocity (°C/s)" stroke={colors.voltage} strokeWidth={2} fill={colors.bgKPI} dot={false} isAnimationActive={false} />
+                  <XAxis dataKey="time" stroke={colors.textMuted} tick={{ fill: colors.textMuted, fontSize: 11 }} className="tabular-nums" />
+                  <YAxis stroke={colors.voltage} tick={{ fill: colors.voltage, fontSize: 11 }} domain={['auto', 'auto']} className="tabular-nums" />
+                  <Tooltip contentStyle={{ backgroundColor: colors.bgKPI, borderColor: colors.borderGlow, borderRadius: '12px', backdropFilter: 'blur(12px)', color: colors.textMain, boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }} itemStyle={{ fontWeight: '600' }} cursor={{ stroke: colors.gridLine }} />
+                  <ReferenceLine y={0.5} stroke={colors.danger} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: 'Critical Heating Rate (+0.5°C/s)', fill: colors.danger, fontSize: 11, fontWeight: '700' }} />
+                  <ReferenceLine y={0} stroke={colors.gridLine} />
+                  <Area type="monotone" dataKey="dTdt" name="Temp Velocity (°C/s)" stroke={colors.voltage} strokeWidth={2.5} fill={colors.glowVoltage} dot={false} isAnimationActive={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -419,58 +427,102 @@ function App() {
           --text-muted: ${colors.textMuted};
           --grid-line: ${colors.gridLine};
         }
-        body { background-color: var(--bg-full); transition: background-color 0.4s ease; }
-        .app-root { min-height: 100vh; color: var(--text-main); font-family: 'Inter', system-ui, sans-serif; padding: 40px 20px; display: flex; justify-content: center; transition: color 0.4s ease; }
-        .glass-panel { background: ${colors.bgCard}; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid ${colors.gridLine}; box-shadow: 0 10px 40px -10px rgba(0,0,0, ${isDarkMode ? '0.5' : '0.1'}); border-radius: 16px; padding: 30px; position: relative; overflow: hidden; }
-        .glass-panel::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, ${colors.borderGlow}, transparent); }
-        .glass-kpi { background: ${colors.bgKPI}; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid ${colors.gridLine}; border-radius: 12px; }
+        body { background-color: var(--bg-full); transition: background-color 0.5s ease; margin: 0; overflow-x: hidden; }
+        
+        .tabular-nums { font-variant-numeric: tabular-nums; letter-spacing: -0.3px; }
+        
+        .mesh-bg {
+          position: fixed; top: -50%; left: -50%; width: 200%; height: 200%; z-index: -1; pointer-events: none;
+          background: radial-gradient(circle at 50% 50%, ${colors.glowVoltage} 0%, transparent 40%),
+                      radial-gradient(circle at 80% 20%, ${colors.glowRssi} 0%, transparent 30%);
+          opacity: ${isDarkMode ? 0.6 : 0.8};
+          transition: opacity 0.5s ease, background 0.5s ease;
+        }
+
+        .app-root { min-height: 100vh; color: var(--text-main); font-family: 'Inter', system-ui, sans-serif; padding: 40px 24px; display: flex; justify-content: center; transition: color 0.5s ease; }
+        
+        .glass-panel { 
+          background: ${colors.bgCard}; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); 
+          border: 1px solid ${colors.borderGlow}; box-shadow: 0 4px 24px -8px rgba(0,0,0, ${isDarkMode ? '0.5' : '0.05'}); 
+          position: relative; overflow: hidden; 
+        }
+        .bento-panel { border-radius: 24px; padding: 32px; }
+        .glass-kpi { 
+          background: ${colors.bgKPI}; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); 
+          border: 1px solid; border-radius: 16px; 
+        }
+
         .layout-wrapper { width: 100%; max-width: 1400px; display: flex; flex-direction: column; gap: 24px; }
-        .header-section { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--grid-line); padding-bottom: 20px; margin-bottom: 25px; gap: 15px; }
-        .header-title { margin: 0 0 10px 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px; background: linear-gradient(to right, ${colors.voltage}, ${colors.extTemp}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .header-details { display: flex; align-items: center; gap: 15px; font-size: 13px; color: var(--text-muted); flex-wrap: wrap; }
-        .detail-item { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+        .header-section { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--grid-line); padding-bottom: 24px; margin-bottom: 32px; gap: 20px; }
+        .header-title { margin: 0 0 12px 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+        .header-details { display: flex; align-items: center; gap: 16px; font-size: 13px; color: var(--text-muted); flex-wrap: wrap; }
+        .detail-item { display: flex; align-items: center; gap: 8px; font-weight: 700; }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; }
-        .detail-separator { border-left: 1px solid var(--grid-line); padding-left: 15px; }
-        .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-        .export-btn, .theme-btn, .time-btn { color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s ease; white-space: nowrap; }
-        .export-btn { background-color: #2563EB; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
-        .export-btn:hover { background-color: #1D4ED8; transform: translateY(-1px); }
-        .theme-btn { background-color: ${isDarkMode ? '#334155' : '#CBD5E1'}; color: var(--text-main); }
-        .theme-btn:hover { background-color: ${isDarkMode ? '#475569' : '#94A3B8'}; }
-        .time-btn { background-color: ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}; color: var(--text-main); border: 1px solid var(--grid-line); }
-        .time-btn:hover { background-color: ${colors.voltage}; color: #fff; border-color: ${colors.voltage}; }
-        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 30px; }
-        .kpi-card { padding: 18px 15px; transition: transform 0.2s; }
-        .kpi-card:hover { transform: translateY(-3px); }
-        .kpi-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-weight: 600; }
-        .kpi-value { font-size: 28px; font-weight: 800; letter-spacing: -1px; }
-        .kpi-value-small { font-size: 20px; font-weight: 700; }
-        .kpi-unit { font-size: 14px; color: var(--text-muted); font-weight: 500; letter-spacing: 0; }
-        .kpi-unit-small { font-size: 12px; color: var(--text-muted); }
-        .kpi-sub-value { font-size: 13px; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
-        .chart-container { width: 100%; height: 420px; position: relative; margin-top: 10px; }
-        .premium-empty-state { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 20px; z-index: 10; pointer-events: none; }
-        .radar-pulse { width: 40px; height: 40px; border-radius: 50%; background-color: ${colors.info}; animation: radarPing 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
+        .detail-separator { border-left: 1px solid var(--grid-line); padding-left: 16px; height: 14px; display: flex; align-items: center; }
+        
+        .header-actions { display: flex; gap: 12px; align-items: center; }
+        .premium-btn { 
+          display: flex; align-items: center; justify-content: center; gap: 8px; color: white; border: none; 
+          padding: 10px 16px; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 13px; 
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); white-space: nowrap; 
+        }
+        .export-btn { background-color: #2563EB; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
+        .export-btn:hover { background-color: #1D4ED8; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3); }
+        .theme-btn { background-color: ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}; color: var(--text-main); border: 1px solid ${colors.borderGlow}; padding: 10px; }
+        .theme-btn:hover { background-color: ${isDarkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)'}; transform: translateY(-2px); }
+
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 32px; }
+        .kpi-card { padding: 20px; transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s; }
+        .kpi-card:hover { transform: translateY(-4px); }
+        .kpi-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-weight: 700; }
+        .kpi-value { font-size: 32px; font-weight: 800; letter-spacing: -1px; }
+        .kpi-value-small { font-size: 22px; font-weight: 700; }
+        .kpi-unit { font-size: 15px; color: var(--text-muted); font-weight: 600; letter-spacing: 0; }
+        .kpi-unit-small { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+        .kpi-sub-value { font-size: 13px; color: var(--text-muted); margin-top: 6px; font-weight: 600; }
+        
+        .flex-toolbar { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; align-items: center; padding: 16px 20px; }
+        .divider-vertical { border-left: 1px solid var(--grid-line); height: 20px; margin: 0 8px; }
+        .time-btn { 
+          background-color: transparent; color: var(--text-main); border: 1px solid var(--grid-line); 
+          padding: 8px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.2s; 
+        }
+        .time-btn:hover { background-color: ${colors.borderGlow}; border-color: ${colors.borderGlow}; }
+        .custom-time-input { border-radius: 10px; padding: 8px 12px; width: 64px; text-align: center; font-weight: 600; outline: none; border: 1px solid; }
+        .custom-time-input:focus { border-color: ${colors.voltage}; box-shadow: 0 0 0 2px ${colors.glowVoltage}; }
+        .fetch-btn { padding: 8px 20px; }
+        .fetch-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px ${colors.glowExtTemp}; }
+
+        .chart-container { width: 100%; height: 460px; position: relative; }
+        .premium-empty-state { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 24px; z-index: 10; pointer-events: none; }
+        .radar-pulse { width: 48px; height: 48px; border-radius: 50%; background-color: ${colors.info}; animation: radarPing 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
         @keyframes radarPing { 75%, 100% { transform: scale(2.5); opacity: 0; } }
+
         .bottom-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-        .logs-card { max-height: 280px; overflow-y: auto; }
-        .section-title { margin: 0 0 20px 0; font-size: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; }
-        .stats-inner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-        .stat-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px; border-bottom: 1px dashed var(--grid-line); padding-bottom: 4px; }
-        .log-item { display: flex; gap: 15px; font-size: 13px; padding: 12px; }
+        .logs-card { display: flex; flex-direction: column; }
+        .section-title { margin: 0 0 24px 0; font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 800; }
+        .stats-inner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+        .stat-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 12px; border-bottom: 1px solid var(--grid-line); padding-bottom: 8px; }
+        .chart-toggle-btn { border: none; border-radius: 8px; padding: 4px 12px; font-size: 11px; cursor: pointer; font-weight: 700; transition: transform 0.2s; }
+        .chart-toggle-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px ${colors.glowVoltage}; }
+        .log-item { display: flex; gap: 16px; font-size: 13px; padding: 14px 16px; transition: transform 0.2s; }
+        .log-item:hover { transform: translateX(4px); }
+
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        ::-webkit-scrollbar { width: 6px; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
+        
+        ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--grid-line); border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
         @media (max-width: 1024px) { .bottom-panel { grid-template-columns: 1fr; } }
         @media (max-width: 768px) {
-          .app-root { padding: 15px; } .glass-panel { padding: 20px; } .header-section { flex-direction: column; align-items: flex-start; }
-          .header-actions { width: 100%; justify-content: space-between; margin-top: 10px; } .export-btn, .theme-btn { flex: 1; text-align: center; }
-          .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+          .app-root { padding: 16px; } .bento-panel { padding: 24px; border-radius: 20px; } .header-section { flex-direction: column; align-items: flex-start; }
+          .header-actions { width: 100%; justify-content: flex-start; margin-top: 8px; } 
+          .kpi-grid { grid-template-columns: repeat(2, 1fr); } .flex-toolbar { flex-direction: column; align-items: stretch; } .divider-vertical { display: none; }
         }
-        @media (max-width: 480px) { .kpi-grid, .stats-inner-grid { grid-template-columns: 1fr; } .chart-container { height: 320px; } .header-title { font-size: 22px; } }
+        @media (max-width: 480px) { .kpi-grid, .stats-inner-grid { grid-template-columns: 1fr; } .chart-container { height: 320px; } .header-title { font-size: 24px; } }
       `}</style>
     </div>
   );
