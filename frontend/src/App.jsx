@@ -453,6 +453,7 @@ function App() {
                 <div className="stat-row"><span>MAX:</span> <strong className="tabular-nums">{stats.maxTemp.toFixed(2)} °C</strong></div>
                 <div className="stat-row"><span>MIN:</span> <strong className="tabular-nums">{stats.minTemp.toFixed(2)} °C</strong></div>
                 <div className="stat-row"><span>AVG:</span> <strong className="tabular-nums">{stats.avgTemp.toFixed(2)} °C</strong></div>
+                <div className="stat-row"><span>Noise (StdDev):</span> <strong className="tabular-nums">±{stats.stdDev.toFixed(3)}</strong></div>
                 <div className="stat-row" style={{ alignItems: 'center' }}>
                   <span>Trend (dT/dt):</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -468,7 +469,6 @@ function App() {
                     </button>
                   </div>
                 </div>
-                <div className="stat-row"><span>Noise (StdDev):</span> <strong className="tabular-nums">±{stats.stdDev.toFixed(3)}</strong></div>
               </div>
               <div>
                 <div style={{ color: colors.voltage, fontWeight: '700', marginBottom: '12px', letterSpacing: '0.5px' }}>ADC Voltage</div>
