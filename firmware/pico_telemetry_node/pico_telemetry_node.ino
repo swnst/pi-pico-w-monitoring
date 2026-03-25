@@ -37,7 +37,7 @@ struct TelemetryData {
   uint32_t free_ram;
 };
 
-const int BUFFER_SIZE = 10;
+const int BUFFER_SIZE = 1;
 TelemetryData buffer[BUFFER_SIZE];
 int dataIndex = 0;
 
@@ -291,5 +291,5 @@ void loop() {
     }
     dataIndex = 0;
   }
-  delay(100);
+  delay(250);
 }
