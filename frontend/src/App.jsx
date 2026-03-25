@@ -128,8 +128,8 @@ function App() {
           if (data.ext_temp > 40) {
             newLogs.unshift({ id: Date.now() + Math.random(), time: data.time, type: 'WARNING', msg: `High Ext Temp: ${data.ext_temp.toFixed(1)}°C` });
           }
-          if (data.voltage > 1.0 || data.voltage <= 0.01) {
-            newLogs.unshift({ id: Date.now() + Math.random(), time: data.time, type: 'CRITICAL', msg: `Sensor Fault (V: ${data.voltage.toFixed(2)}V)` });
+          if (data.voltage >= 3.25 || data.voltage <= 0.1) {
+            newLogs.unshift({ id: Date.now() + Math.random(), time: data.time, type: 'CRITICAL', msg: `ADC Saturation / Fault (V: ${data.voltage.toFixed(2)}V)` });
           }
           if (data.rssi < -85) {
             newLogs.unshift({ id: Date.now() + Math.random(), time: data.time, type: 'WARNING', msg: `Weak WiFi: ${data.rssi}dBm` });
@@ -432,7 +432,7 @@ function App() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={colors.gridLine} vertical={false} />
                 <XAxis dataKey="time" stroke={colors.textMuted} tick={{ fill: colors.textMuted, fontSize: 12 }} axisLine={{ stroke: colors.gridLine }} className="tabular-nums" />
-                <YAxis yAxisId="left" stroke={colors.voltage} tick={{ fill: colors.voltage, fontSize: 12 }} domain={[0, 1.0]} axisLine={false} tickLine={false} className="tabular-nums" />
+                <YAxis yAxisId="left" stroke={colors.voltage} tick={{ fill: colors.voltage, fontSize: 12 }} domain={[0, 3.5]} axisLine={false} tickLine={false} className="tabular-nums" />
                 <YAxis yAxisId="right" orientation="right" stroke={colors.extTemp} tick={{ fill: colors.extTemp, fontSize: 12 }} domain={[20, 50]} axisLine={false} tickLine={false} className="tabular-nums" />
                 <Tooltip content={<CustomTooltip />} cursor={{ stroke: colors.gridLine, strokeWidth: 1, strokeDasharray: '4 4' }} />                <Legend verticalAlign="top" height={40} onClick={handleLegendClick} wrapperStyle={{ cursor: 'pointer', paddingBottom: '10px', fontSize: '13px', color: colors.textMain, fontWeight: '600' }} />
                 <ReferenceLine y={40} yAxisId="right" stroke={colors.warning} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: 'Overheat Threshold (40°C)', fill: colors.warning, fontSize: 11, fontWeight: '700' }} />
