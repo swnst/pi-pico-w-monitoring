@@ -229,7 +229,7 @@ void loop() {
   int adc_sum = 0;
   for (int i = 0; i < 10; i++) {
     adc_sum += analogRead(ADC_PIN);
-    delay(2); 
+    delay(2);
   }
   float rawADC = adc_sum / 10.0;
   float voltage = rawADC * (V_REF / ADC_MAX);
@@ -241,7 +241,10 @@ void loop() {
   char currentTime[10] = "NO_SYNC";
   if (isTimeSynced) {
     time_t now = time(nullptr);
-    struct tm* timeinfo = localtime(&now);
+    now = now + 25200;
+
+    struct tm* timeinfo = gmtime(&now);
+
     if (timeinfo->tm_year > 100) {
       strftime(currentTime, sizeof(currentTime), "%H:%M:%S", timeinfo);
     }
