@@ -65,7 +65,7 @@ function App() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [showAdvancedAnalytics, setShowAdvancedAnalytics] = useState(false);
 
-  const maxDataPoints = useRef(100);
+  const maxDataPoints = useRef(60);
   const watchdogTimer = useRef(null);
 
   const fetchHistoricalData = async (minutes) => {
@@ -87,7 +87,7 @@ function App() {
   };
 
   useEffect(() => {
-    fetchHistoricalData(5);
+    fetchHistoricalData(1);
   }, []);
 
   const [hiddenSeries, setHiddenSeries] = useState({
