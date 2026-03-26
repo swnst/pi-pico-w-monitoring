@@ -125,7 +125,7 @@ function App() {
       setEventLogs((prevLogs) => {
         let newLogs = [...prevLogs];
         incomingArray.forEach(data => {
-          if (data.ext_temp > 40) {
+          if (data.ext_temp > 48) {
             newLogs.unshift({ id: Date.now() + Math.random(), time: data.time, type: 'WARNING', msg: `High Ext Temp: ${data.ext_temp.toFixed(1)}°C` });
           }
           if (data.voltage >= 3.25 || data.voltage <= 0.1) {
@@ -227,7 +227,7 @@ function App() {
     const c = (sumY - m * sumX) / n;
 
     if (m > 0.05) {
-      const threshold = 40.0;
+      const threshold = 50.0;
       const targetRelativeSec = (threshold - c) / m;
       const currentRelativeSec = (latestData.uptime - startUptime) / 1000;
 
@@ -304,7 +304,7 @@ function App() {
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '12px', color: '#FCA5A5', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '1px' }}>Time to Critical (40°C)</div>
+              <div style={{ fontSize: '12px', color: '#FCA5A5', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '1px' }}>Time to Critical (50°C)</div>
               <div className="tabular-nums" style={{ fontSize: '36px', fontWeight: '900', color: '#FFFFFF', textShadow: '0 0 20px rgba(255,255,255,0.5)' }}>
                 {predictiveAlert.secondsLeft} <span style={{ fontSize: '16px', color: '#FCA5A5' }}>sec</span>
               </div>
@@ -433,9 +433,9 @@ function App() {
                 <CartesianGrid strokeDasharray="3 3" stroke={colors.gridLine} vertical={false} />
                 <XAxis dataKey="time" stroke={colors.textMuted} tick={{ fill: colors.textMuted, fontSize: 12 }} axisLine={{ stroke: colors.gridLine }} className="tabular-nums" />
                 <YAxis yAxisId="left" stroke={colors.voltage} tick={{ fill: colors.voltage, fontSize: 12 }} domain={[0, 3.5]} axisLine={false} tickLine={false} className="tabular-nums" />
-                <YAxis yAxisId="right" orientation="right" stroke={colors.extTemp} tick={{ fill: colors.extTemp, fontSize: 12 }} domain={[20, 50]} axisLine={false} tickLine={false} className="tabular-nums" />
-                <Tooltip content={<CustomTooltip />} cursor={{ stroke: colors.gridLine, strokeWidth: 1, strokeDasharray: '4 4' }} />                <Legend verticalAlign="top" height={40} onClick={handleLegendClick} wrapperStyle={{ cursor: 'pointer', paddingBottom: '10px', fontSize: '13px', color: colors.textMain, fontWeight: '600' }} />
-                <ReferenceLine y={40} yAxisId="right" stroke={colors.warning} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: 'Overheat Threshold (40°C)', fill: colors.warning, fontSize: 11, fontWeight: '700' }} />
+                <YAxis yAxisId="right" orientation="right" stroke={colors.extTemp} tick={{ fill: colors.extTemp, fontSize: 12 }} domain={[15, 55]} axisLine={false} tickLine={false} className="tabular-nums" />
+                <Tooltip content={<CustomTooltip />} cursor={{ stroke: colors.gridLine, strokeWidth: 1, strokeDasharray: '4 4' }} />
+                <ReferenceLine y={50} yAxisId="right" stroke={colors.warning} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: 'System Limit (50°C)', fill: colors.warning, fontSize: 11, fontWeight: '700' }} />
                 <Area hide={hiddenSeries.voltage} yAxisId="left" type="monotone" dataKey="voltage" name="Voltage" stroke={colors.voltage} strokeWidth={2.5} fill="url(#colorVoltage)" dot={false} isAnimationActive={false} />
                 <Area hide={hiddenSeries.ext_temp} yAxisId="right" type="monotone" dataKey="ext_temp" name="Ext Temp" stroke={colors.extTemp} strokeWidth={2.5} fill="url(#colorExtTemp)" dot={false} isAnimationActive={false} />
                 <Area hide={hiddenSeries.core_temp} yAxisId="right" type="monotone" dataKey="core_temp" name="Core Temp" stroke={colors.coreTemp} strokeWidth={2.5} fill="url(#colorCoreTemp)" dot={false} isAnimationActive={false} />
