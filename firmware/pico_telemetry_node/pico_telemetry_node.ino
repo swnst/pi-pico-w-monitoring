@@ -233,8 +233,7 @@ void loop() {
   }
   float rawADC = adc_sum / 10.0;
   float voltage = rawADC * (V_REF / ADC_MAX);
-  const float TEMP_OFFSET = 7.6;
-  float ext_temp = ((voltage + 1.3884) / 0.0948) - TEMP_OFFSET;
+  float ext_temp = ((voltage + 1.3884) / 0.0948);
   float core_temp = analogReadTemp();
   int32_t current_rssi = WiFi.RSSI();
   uint32_t current_ram = rp2040.getFreeHeap();
