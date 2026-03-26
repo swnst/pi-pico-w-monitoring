@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>⚡ Pico W Edge Node Diagnostics</h1>
+  <h1>Pico W Edge Node Diagnostics</h1>
   <p><b>Real-time IoT Telemetry Dashboard with Predictive Thermal Runaway Analytics</b></p>
 
   <img src="https://img.shields.io/badge/Hardware-Raspberry_Pi_Pico_W-C51A4A?style=for-the-badge&logo=raspberrypi" alt="Hardware" />
@@ -9,27 +9,27 @@
   <br><br>
 </div>
 
-![Dashboard Screenshot](https://via.placeholder.com/1000x600.png?text=Insert+Your+Dashboard+Screenshot+Here)
+[![Monitoring Dashboard](https://img1.pic.in.th/images/Screenshot_26-3-2026_19128_pi-pico-w-monitoring.vercel.app.jpeg)](https://pic.in.th/image/Screenshot-26-3-2026-19128-pi-pico-w-monitoring.vercel.app.837ITA)
 
 ## 📌 Project Overview
-โปรเจกต์นี้คือระบบตรวจติดตามสุขภาพของอุปกรณ์ Edge Node แบบเรียลไทม์ (Real-time Telemetry) ที่ไม่ได้ทำหน้าที่เพียงแค่แสดงผลข้อมูลดิบ แต่ผสานการทำงานของ **Client-side Computing** เพื่อวิเคราะห์ข้อมูลเชิงพยากรณ์ (Predictive Analytics) ระบบสามารถคำนวณอัตราการเปลี่ยนแปลงอุณหภูมิและพยากรณ์จุดวิกฤต (System Saturation) ได้ล่วงหน้าผ่านโมเดลคณิตศาสตร์
+This project is a real-time health monitoring system for Edge Nodes. Beyond visualizing raw telemetry data, it integrates **Client-side Computing** for **Predictive Analytics**. The system continuously calculates the temperature's rate of change and forecasts critical system saturation points (Time-to-Critical) in advance via mathematical modeling.
 
 ## 🏗️ System Architecture & Key Features
 
 ### 1. Hardware & Edge Processing (Firmware)
-* **Oversampling Filter:** ใช้เทคนิค Oversampling อ่านค่า ADC 10 ครั้งเพื่อหาค่าเฉลี่ย ลดสัญญาณรบกวนทางไฟฟ้า (Hardware Noise Filtering)
-* **Captive Portal:** มีระบบ Provisioning เพื่อตั้งค่า WiFi ให้อุปกรณ์ผ่าน Access Point โดยไม่ต้องแก้โค้ด C++
-* **Signal Conditioning:** ออกแบบใช้งานร่วมกับวงจร Op-Amp ขยายสัญญาณจากเซนเซอร์ LM35 ให้เต็มความละเอียด ADC ของบอร์ด (0.5V - 3.3V)
+* **Oversampling Filter:** Utilizes a 10x ADC oversampling technique to calculate averages, effectively mitigating electrical noise (Hardware Noise Filtering).
+* **Captive Portal:** Features an onboard provisioning system for WiFi configuration via an Access Point, eliminating the need to hardcode credentials.
+* **Signal Conditioning:** Designed to interface with an Op-Amp circuit, amplifying the LM35 analog signal to maximize the Pico W's ADC resolution limit (0.5V - 3.3V).
 
 ### 2. High-Performance Data Pipeline (Backend)
-* **Zero-Latency Broadcast:** ใช้โปรโตคอล `WebSockets (Socket.IO)` ในการยิงข้อมูลที่ได้รับจาก Hardware ไปยัง Client ทันทีโดยไม่มีการกักข้อมูล
-* **TTL Time-Series Database:** จัดเก็บประวัติข้อมูลใน `MongoDB` โดยมีการตั้ง Time-To-Live (TTL Index) 6 ชั่วโมง เพื่อบริหารจัดการพื้นที่หน่วยความจำอัตโนมัติ
+* **Zero-Latency Broadcast:** Employs `WebSockets (Socket.IO)` to instantly broadcast incoming hardware payloads to clients without micro-batching or buffering delays.
+* **TTL Time-Series Database:** Stores historical telemetry data in `MongoDB`, utilizing a 6-hour Time-To-Live (TTL Index) for automated storage management and optimized query latency.
 
 ### 3. Advanced Analytics & UI/UX (Frontend)
-* **Predictive Thermal Runaway:** ใช้โมเดล **Ordinary Least Squares (OLS) Linear Regression** คำนวณความชันของอุณหภูมิบนเบราว์เซอร์ เพื่อพยากรณ์เวลา (Time-to-Critical) ที่ระบบจะโอเวอร์ฮีทล่วงหน้า
-* **Data Smoothing:** ประยุกต์ใช้คณิตศาสตร์ **Exponential Moving Average (EMA)** ในการกรองข้อมูลอุณหภูมิให้แสดงผลบน UI ได้อย่างเสถียร (Smooth Rendering)
-* **Calculus on Edge:** คำนวณหาความเร็วในการเปลี่ยนแปลงอุณหภูมิต่อวินาที (dT/dt) พร้อมแจ้งเตือนหากอัตราเร่งสูงผิดปกติ
-* **Sliding Window DOM Management:** จำกัดขนาด Array ข้อมูลเพื่อรักษาความเร็วการเรนเดอร์กราฟแบบ 60 FPS ป้องกัน Memory Leak ในเบราว์เซอร์
+* **Predictive Thermal Runaway:** Implements an **Ordinary Least Squares (OLS) Linear Regression** model executing directly on the browser to compute the temperature gradient, forecasting the exact timeframe (Time-to-Critical) until system failure.
+* **Data Smoothing:** Applies **Exponential Moving Average (EMA)** mathematics to filter real-time temperature fluctuations, ensuring highly stable UI rendering.
+* **Calculus on Edge:** Computes the temperature velocity per second (dT/dt) in real-time, triggering automated alerts upon detecting critical acceleration thresholds.
+* **Sliding Window DOM Management:** Strictly caps the data array size (Dynamic Payload Capping) to maintain 60 FPS rendering performance and prevent DOM-induced memory leaks in the client's browser.
 
 ---
 
@@ -48,7 +48,7 @@ pi-pico-w-monitoring/
 │   ├── server.js
 │   ├── package.json
 │   └── .env.example
-├── firmware/                 # C++ Firmware สำหรับบอร์ด Pico W
+├── firmware/                 # C++ Firmware for Pico W Edge Node
 │   └── pico_telemetry_node/
 │       └── pico_telemetry_node.ino
 └── frontend/                 # React SPA Dashboard
@@ -66,7 +66,7 @@ pi-pico-w-monitoring/
 ```bash
 cd backend
 npm install
-# คัดลอก .env.example เป็น .env และใส่ค่า MONGODB_URI
+# Copy .env.example to .env and configure your MONGODB_URI
 npm start
 ```
 
@@ -74,12 +74,12 @@ npm start
 ```bash
 cd frontend
 npm install
-# แก้ไข URL ของ Socket.io ใน App.jsx ให้ตรงกับ Backend ของคุณ
+# Ensure the Socket.io URL in App.jsx points to your Backend API
 npm run dev
 ```
 
 ### 3. Firmware Setup
-1. เปิดไฟล์ `pico_telemetry_node.ino` ใน Arduino IDE
-2. ติดตั้งไลบรารี: `ArduinoJson`, `WebSockets`
-3. แก้ไขตัวแปร `serverUrl` ให้ชี้ไปยัง Backend API
-4. Flash ลงบอร์ด Raspberry Pi Pico W
+1. Open `pico_telemetry_node.ino` in the Arduino IDE.
+2. Install dependencies: `ArduinoJson`, `WebSockets`.
+3. Modify the `serverUrl` variable to match your deployed Backend API endpoint.
+4. Flash the firmware to the Raspberry Pi Pico W.
