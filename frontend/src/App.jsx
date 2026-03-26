@@ -53,6 +53,52 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
+const BeautifulLegend = (props) => {
+  const { payload, onClick, hiddenSeries } = props;
+
+  const legendItemStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    cursor: 'pointer',
+    fontFamily: "'Inter', sans-serif",
+    fontSize: '12px',
+    fontWeight: '700',
+    color: 'var(--text-main)',
+    padding: '6px 10px',
+    borderRadius: '8px',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    transition: 'all 0.2s ease',
+    userSelect: 'none',
+  };
+
+  return (
+    <div className="recharts-default-legend" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+      {payload.map((entry, index) => (
+        <div
+          key={`item-${index}`}
+          style={{
+            ...legendItemStyle,
+            opacity: hiddenSeries[entry.dataKey] ? 0.4 : 1
+          }}
+          className="beautiful-legend-item"
+          onClick={() => onClick(entry)}
+        >
+          <div style={{
+            width: '10px',
+            height: '10px',
+            borderRadius: '50%',
+            backgroundColor: entry.color,
+            boxShadow: `0 0 8px ${entry.color}`,
+          }}></div>
+          {entry.value}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 function App() {
   const [dataPoints, setDataPoints] = useState([]);
   const [isServerConnected, setIsServerConnected] = useState(false);
@@ -64,7 +110,9 @@ function App() {
   const [isFetchingHistory, setIsFetchingHistory] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [showAdvancedAnalytics, setShowAdvancedAnalytics] = useState(false);
+  const [smoothedTemp, setSmoothedTemp] = useState(null);
 
+  const EMA_ALPHA = 0.1;
   const maxDataPoints = useRef(60);
   const watchdogTimer = useRef(null);
 
@@ -78,9 +126,15 @@ function App() {
         maxDataPoints.current = Math.max(100, data.length + 50);
         setDataPoints(data);
         setDisplayUptime(data[data.length - 1].uptime);
+
+        let currentEMA = data[0].ext_temp;
+        data.forEach(pt => {
+          currentEMA = (pt.ext_temp * EMA_ALPHA) + (currentEMA * (1 - EMA_ALPHA));
+        });
+        setSmoothedTemp(currentEMA);
       }
     } catch (error) {
-      console.error("Failed to fetch history:", error);
+      console.error(error);
     } finally {
       setIsFetchingHistory(false);
     }
@@ -116,6 +170,18 @@ function App() {
         });
         setDisplayUptime(incomingArray[incomingArray.length - 1].uptime);
       }
+
+      setSmoothedTemp(prevEMA => {
+        let currentEMA = prevEMA;
+        incomingArray.forEach(pt => {
+          if (currentEMA === null) {
+            currentEMA = pt.ext_temp;
+          } else {
+            currentEMA = (pt.ext_temp * EMA_ALPHA) + (currentEMA * (1 - EMA_ALPHA));
+          }
+        });
+        return currentEMA;
+      });
 
       setDataPoints((prevData) => {
         const newData = [...prevData, ...incomingArray];
@@ -356,7 +422,7 @@ function App() {
             </div>
             <div className="kpi-card glass-kpi" style={{ boxShadow: `0 8px 32px ${colors.glowExtTemp}`, borderColor: colors.borderGlow }}>
               <div className="kpi-label">Ext. Temperature</div>
-              <div className="kpi-value tabular-nums" style={{ color: colors.extTemp }}>{latestData.ext_temp.toFixed(2)} <span className="kpi-unit">°C</span></div>
+              <div className="kpi-value tabular-nums" style={{ color: colors.extTemp }}>{smoothedTemp !== null ? smoothedTemp.toFixed(2) : '--'} <span className="kpi-unit">°C</span></div>
             </div>
             <div className="kpi-card glass-kpi" style={{ boxShadow: `0 8px 32px ${latestData.core_temp > 45 ? 'rgba(245,158,11,0.15)' : colors.glowCoreTemp}`, borderColor: colors.borderGlow }}>
               <div className="kpi-label">Core Temperature</div>
@@ -435,6 +501,7 @@ function App() {
                 <YAxis yAxisId="left" stroke={colors.voltage} tick={{ fill: colors.voltage, fontSize: 12 }} domain={[0, 3.5]} axisLine={false} tickLine={false} className="tabular-nums" />
                 <YAxis yAxisId="right" orientation="right" stroke={colors.extTemp} tick={{ fill: colors.extTemp, fontSize: 12 }} domain={[15, 55]} axisLine={false} tickLine={false} className="tabular-nums" />
                 <Tooltip content={<CustomTooltip />} cursor={{ stroke: colors.gridLine, strokeWidth: 1, strokeDasharray: '4 4' }} />
+                <Legend verticalAlign="top" content={<BeautifulLegend hiddenSeries={hiddenSeries} onClick={handleLegendClick} />} />
                 <ReferenceLine y={50} yAxisId="right" stroke={colors.warning} strokeDasharray="4 4" label={{ position: 'insideTopLeft', value: 'System Limit (50°C)', fill: colors.warning, fontSize: 11, fontWeight: '700' }} />
                 <Area hide={hiddenSeries.voltage} yAxisId="left" type="monotone" dataKey="voltage" name="Voltage" stroke={colors.voltage} strokeWidth={2.5} fill="url(#colorVoltage)" dot={false} isAnimationActive={false} />
                 <Area hide={hiddenSeries.ext_temp} yAxisId="right" type="monotone" dataKey="ext_temp" name="Ext Temp" stroke={colors.extTemp} strokeWidth={2.5} fill="url(#colorExtTemp)" dot={false} isAnimationActive={false} />
@@ -637,6 +704,15 @@ function App() {
           .kpi-value { font-size: 24px; }
           .kpi-value-small { font-size: 18px; }
           .kpi-label { font-size: 10px; margin-bottom: 8px; }
+
+          .recharts-default-legend {
+            justify-content: center !important; 
+            padding-bottom: 8px !important;
+            flex-wrap: wrap !important;
+          }
+          .beautiful-legend-item:hover {
+            opacity: 0.8;
+          }
         }
       `}</style>
     </div>
