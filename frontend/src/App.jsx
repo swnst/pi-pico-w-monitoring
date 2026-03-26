@@ -616,12 +616,28 @@ function App() {
         ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
         @media (max-width: 1024px) { .bottom-panel { grid-template-columns: 1fr; } }
+        
         @media (max-width: 768px) {
-          .app-root { padding: 16px; } .bento-panel { padding: 24px; border-radius: 20px; } .header-section { flex-direction: column; align-items: flex-start; }
-          .header-actions { width: 100%; justify-content: flex-end; margin-top: 12px; } 
-          .kpi-grid { grid-template-columns: repeat(2, 1fr); } .flex-toolbar { flex-direction: column; align-items: stretch; } .divider-vertical { display: none; }
+          .app-root { padding: 12px; } 
+          .bento-panel { padding: 16px; border-radius: 16px; } 
+          .header-section { flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: 20px; padding-bottom: 16px; }
+          .header-actions { width: 100%; justify-content: flex-end; margin-top: 0; } 
+          .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; } 
+          .flex-toolbar { flex-direction: row; flex-wrap: wrap; justify-content: space-between; padding: 12px; gap: 8px; } 
+          .time-btn { flex: 1; padding: 8px 4px; font-size: 12px; min-width: 60px; }
+          .custom-time-input { flex: 1; min-width: 50px; padding: 8px 4px; }
+          .divider-vertical { display: none; }
         }
-        @media (max-width: 480px) { .kpi-grid, .stats-inner-grid { grid-template-columns: 1fr; } .chart-container { height: 320px; } .header-title { font-size: 24px; } }
+        
+        @media (max-width: 480px) { 
+          .stats-inner-grid { grid-template-columns: 1fr; } 
+          .chart-container { height: 280px; } 
+          .header-title { font-size: 20px; }
+          .kpi-card { padding: 16px 12px; }
+          .kpi-value { font-size: 24px; }
+          .kpi-value-small { font-size: 18px; }
+          .kpi-label { font-size: 10px; margin-bottom: 8px; }
+        }
       `}</style>
     </div>
   );
