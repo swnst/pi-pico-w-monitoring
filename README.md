@@ -9,7 +9,7 @@
   <br><br>
 </div>
 
-[![Monitoring Dashboard](https://img2.pic.in.th/pico-monitoring.md.jpeg)](https://pic.in.th/image/pico-monitoring.87HxkE)
+[![Monitoring Dashboard]([https://img2.pic.in.th/pico-monitoring.md.jpeg)](https://pic.in.th/image/pico-monitoring.87HxkE](https://img2.pic.in.th/pico-monitoring.jpeg)](https://pic.in.th/image/pico-monitoring.87HxkE))
 
 ## 📌 Project Overview
 This project is a real-time health monitoring system for Edge Nodes. Beyond visualizing raw telemetry data, it integrates **Client-side Computing** for **Predictive Analytics**. The system continuously calculates the temperature's rate of change and forecasts critical system saturation points (Time-to-Critical) in advance via mathematical modeling.
