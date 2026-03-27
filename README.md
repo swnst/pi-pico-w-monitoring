@@ -2,10 +2,10 @@
   <h1>Pico W Edge Node Diagnostics</h1>
   <p><b>Real-time IoT Telemetry Dashboard with Predictive Thermal Runaway Analytics</b></p>
 
-  <img src="https://img.shields.io/badge/Hardware-Raspberry_Pi_Pico_W-C51A4A?style=for-the-badge&logo=raspberrypi" alt="Hardware" />
-  <img src="https://img.shields.io/badge/Firmware-C%2B%2B-00599C?style=for-the-badge&logo=c%2B%2B" alt="C++" />
-  <img src="https://img.shields.io/badge/Frontend-React_|_Recharts-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
-  <img src="https://img.shields.io/badge/Backend-Node.js_|_Express-339933?style=for-the-badge&logo=nodedotjs" alt="Node" />
+  <img src="[https://img.shields.io/badge/Hardware-Raspberry_Pi_Pico_W-C51A4A?style=for-the-badge&logo=raspberrypi](https://img.shields.io/badge/Hardware-Raspberry_Pi_Pico_W-C51A4A?style=for-the-badge&logo=raspberrypi)" alt="Hardware" />
+  <img src="[https://img.shields.io/badge/Firmware-C%2B%2B-00599C?style=for-the-badge&logo=c%2B%2B](https://img.shields.io/badge/Firmware-C%2B%2B-00599C?style=for-the-badge&logo=c%2B%2B)" alt="C++" />
+  <img src="[https://img.shields.io/badge/Frontend-React](https://img.shields.io/badge/Frontend-React)_|_Recharts-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
+  <img src="[https://img.shields.io/badge/Backend-Node.js](https://img.shields.io/badge/Backend-Node.js)_|_Express-339933?style=for-the-badge&logo=nodedotjs" alt="Node" />
   <br><br>
 </div>
 
@@ -18,7 +18,11 @@ This project is a real-time health monitoring system for Edge Nodes. Beyond visu
 
 ### 1. Hardware & Edge Processing (Firmware)
 * **Oversampling Filter:** Utilizes a 10x ADC oversampling technique to calculate averages, effectively mitigating electrical noise (Hardware Noise Filtering).
-* **Captive Portal:** Features an onboard provisioning system for WiFi configuration via an Access Point, eliminating the need to hardcode credentials.
+* **N-Point Piecewise Linear Interpolation:** Implements a dynamic Lookup Table (LUT) to compensate for Op-Amp non-linearity and hardware saturation near 50°C, ensuring high mathematical accuracy across the entire sensor range.
+* **Resilient Network Architecture:** Features a non-blocking, asynchronous watchdog timer for continuous WiFi connection monitoring and auto-reconnection without halting the core telemetry loop.
+* **High-Frequency Telemetry Polling:** Optimized to push payloads at 4Hz (250ms intervals) via HTTP POST, maximizing real-time data acquisition capabilities.
+* **Rate Limit Backoff Protection:** Integrates a responsive watchdog to handle HTTP 429 (Too Many Requests) errors, triggering an automated 5-second exponential backoff to prevent IP banning from the backend.
+* **Enterprise-Grade Captive Portal:** An onboard provisioning system featuring a modern Glassmorphism UI, utilizing an expanded 64-byte EEPROM architecture to securely support complex WPA3 WiFi credentials.
 * **Signal Conditioning:** Designed to interface with an Op-Amp circuit, amplifying the LM35 analog signal to maximize the Pico W's ADC resolution limit (0.5V - 3.3V).
 
 ### 2. High-Performance Data Pipeline (Backend)
@@ -80,6 +84,6 @@ npm run dev
 
 ### 3. Firmware Setup
 1. Open `pico_telemetry_node.ino` in the Arduino IDE.
-2. Install dependencies: `ArduinoJson`, `WebSockets`.
+2. Install dependencies: `ArduinoJson` (Note: The board uses the built-in `WiFi` and `HTTPClient` libraries; WebSockets are handled exclusively on the backend).
 3. Modify the `serverUrl` variable to match your deployed Backend API endpoint.
 4. Flash the firmware to the Raspberry Pi Pico W.
