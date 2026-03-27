@@ -2,10 +2,10 @@
   <h1>Pico W Edge Node Diagnostics</h1>
   <p><b>Real-time IoT Telemetry Dashboard with Predictive Thermal Runaway Analytics</b></p>
 
-  <img src="[https://img.shields.io/badge/Hardware-Raspberry_Pi_Pico_W-C51A4A?style=for-the-badge&logo=raspberrypi](https://img.shields.io/badge/Hardware-Raspberry_Pi_Pico_W-C51A4A?style=for-the-badge&logo=raspberrypi)" alt="Hardware" />
-  <img src="[https://img.shields.io/badge/Firmware-C%2B%2B-00599C?style=for-the-badge&logo=c%2B%2B](https://img.shields.io/badge/Firmware-C%2B%2B-00599C?style=for-the-badge&logo=c%2B%2B)" alt="C++" />
-  <img src="[https://img.shields.io/badge/Frontend-React](https://img.shields.io/badge/Frontend-React)_|_Recharts-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
-  <img src="[https://img.shields.io/badge/Backend-Node.js](https://img.shields.io/badge/Backend-Node.js)_|_Express-339933?style=for-the-badge&logo=nodedotjs" alt="Node" />
+  <img src="https://img.shields.io/badge/Hardware-Raspberry_Pi_Pico_W-C51A4A?style=for-the-badge&logo=raspberrypi" alt="Hardware" />
+  <img src="https://img.shields.io/badge/Firmware-C%2B%2B-00599C?style=for-the-badge&logo=c%2B%2B" alt="C++" />
+  <img src="https://img.shields.io/badge/Frontend-React_|_Recharts-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
+  <img src="https://img.shields.io/badge/Backend-Node.js_|_Express-339933?style=for-the-badge&logo=nodedotjs" alt="Node" />
   <br><br>
 </div>
 
