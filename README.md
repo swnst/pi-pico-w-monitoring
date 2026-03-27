@@ -35,6 +35,15 @@ This project is a real-time health monitoring system for Edge Nodes. Beyond visu
 * **Calculus on Edge:** Computes the temperature velocity per second (dT/dt) in real-time, triggering automated alerts upon detecting critical acceleration thresholds.
 * **Sliding Window DOM Management:** Strictly caps the data array size (Dynamic Payload Capping) to maintain 60 FPS rendering performance and prevent DOM-induced memory leaks in the client's browser.
 
+### 4. Device Provisioning (WiFi Configuration)
+Once the firmware is flashed, the Pico W requires network credentials to begin streaming telemetry.
+
+1. **Power on the Node:** The Pico W will boot into Access Point (AP) mode if no saved network is found.
+2. **Connect to AP:** Using your smartphone or laptop, connect to the WiFi network named **`PicoW_Config_Node`**.
+3. **Access Captive Portal:** A provisioning interface should pop up automatically. If not, open a web browser and navigate to **`http://192.168.4.1`**.
+4. **Enter Credentials:** Select your target 2.4GHz WiFi network from the dropdown list, enter the password, and click 'Save & Connect'.
+5. **Reboot & Stream:** The edge node will securely save the credentials to its 64-byte EEPROM, automatically reboot, and begin pushing telemetry data to the backend.
+
 ---
 
 ## 🛠️ Tech Stack
