@@ -100,6 +100,7 @@ const BeautifulLegend = (props) => {
 };
 
 function App() {
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const [dataPoints, setDataPoints] = useState([]);
   const [isServerConnected, setIsServerConnected] = useState(false);
   const [isNodeActive, setIsNodeActive] = useState(false);
@@ -226,20 +227,40 @@ function App() {
     setHiddenSeries(prev => ({ ...prev, [dataKey]: !prev[dataKey] }));
   };
 
-  const exportToCSV = () => {
+  const exportData = (format) => {
     if (dataPoints.length === 0) return;
     const headers = ["Time", "Uptime (ms)", "Voltage (V)", "Ext Temp (C)", "Core Temp (C)", "RSSI (dBm)", "Free RAM (Bytes)"];
-    const csvRows = [headers.join(',')];
-    dataPoints.forEach(row => {
-      csvRows.push(`${row.time},${row.uptime},${row.voltage},${row.ext_temp},${row.core_temp},${row.rssi},${row.free_ram}`);
-    });
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+
+    let content = "";
+    let filename = "";
+    let mimeType = "";
+
+    if (format === 'csv') {
+      const rows = [headers.join(',')];
+      dataPoints.forEach(row => {
+        rows.push(`${row.time},${row.uptime},${row.voltage},${row.ext_temp},${row.core_temp},${row.rssi},${row.free_ram}`);
+      });
+      content = rows.join('\n');
+      filename = `Telemetry_Export_${new Date().toISOString().slice(0, 10)}.csv`;
+      mimeType = 'text/csv';
+    } else if (format === 'txt') {
+      const rows = [headers.join('\t')];
+      dataPoints.forEach(row => {
+        rows.push(`${row.time}\t${row.uptime}\t${row.voltage}\t${row.ext_temp}\t${row.core_temp}\t${row.rssi}\t${row.free_ram}`);
+      });
+      content = rows.join('\n');
+      filename = `Telemetry_Export_${new Date().toISOString().slice(0, 10)}.txt`;
+      mimeType = 'text/plain';
+    }
+
+    const blob = new Blob([content], { type: mimeType });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Telemetry_Export_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = filename;
     a.click();
     window.URL.revokeObjectURL(url);
+    setShowExportMenu(false);
   };
 
   const latestData = dataPoints.length > 0 ? dataPoints[dataPoints.length - 1] :
@@ -408,10 +429,52 @@ function App() {
                   <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
                 )}
               </button>
-              <button className="export-btn premium-btn" onClick={exportToCSV}>
-                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                CSV
-              </button>
+              <div style={{ position: 'relative' }}>
+                <button
+                  className="export-btn premium-btn"
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                >
+                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                  Export
+                  <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ marginLeft: '4px', transform: showExportMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+
+                {showExportMenu && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    marginTop: '8px',
+                    background: isDarkMode ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(16px)',
+                    border: `1px solid ${colors.borderGlow}`,
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    padding: '8px',
+                    minWidth: '130px',
+                    zIndex: 50
+                  }}>
+                    <button
+                      onClick={() => exportData('csv')}
+                      style={{ background: 'transparent', border: 'none', color: colors.textMain, padding: '10px 12px', textAlign: 'left', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', transition: 'background 0.2s' }}
+                      onMouseOver={(e) => e.target.style.background = isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}
+                      onMouseOut={(e) => e.target.style.background = 'transparent'}
+                    >
+                      📄 .CSV Type
+                    </button>
+                    <button
+                      onClick={() => exportData('txt')}
+                      style={{ background: 'transparent', border: 'none', color: colors.textMain, padding: '10px 12px', textAlign: 'left', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', transition: 'background 0.2s' }}
+                      onMouseOver={(e) => e.target.style.background = isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}
+                      onMouseOut={(e) => e.target.style.background = 'transparent'}
+                    >
+                      📝 .TXT Type
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
